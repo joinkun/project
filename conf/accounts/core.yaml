@@ -1,0 +1,389 @@
+name: core
+min_ratio: 0.9
+generated_from: data/interim/survey/element_frequency.csv
+basis:
+- name: __OTHER__jppfs_cor_Assets
+  members: []
+  parent_subtotal: jppfs_cor_Assets
+  side: assets
+  sign: free
+  sign_reason: 残余科目(差額定義)のため負になりうる(手動指定)。
+  ratio: null
+  always_include: false
+  include_reason: null
+- name: inventories
+  members:
+  - jppfs_cor_Inventories
+  - jppfs_cor_MerchandiseAndFinishedGoods
+  - jppfs_cor_Merchandise
+  - jppfs_cor_FinishedGoods
+  - jppfs_cor_WorkInProcess
+  - jppfs_cor_RawMaterialsAndSupplies
+  - jppfs_cor_RawMaterials
+  - jppfs_cor_Supplies
+  parent_subtotal: jppfs_cor_CurrentAssets
+  side: assets
+  sign: nonneg
+  sign_reason: 実測3503社(正のみ)中、負が0社。
+  ratio: 1.0
+  always_include: false
+  include_reason: null
+- name: receivables_trade
+  members:
+  - jppfs_cor_AccountsReceivableTrade
+  - jppfs_cor_NotesAndAccountsReceivableTrade
+  - jppfs_cor_NotesAndAccountsReceivableTradeAndContractAssets
+  - jppfs_cor_NotesReceivableTrade
+  parent_subtotal: jppfs_cor_CurrentAssets
+  side: assets
+  sign: nonneg
+  sign_reason: 実測3532社(正のみ)中、負が0社。
+  ratio: 1.0
+  always_include: false
+  include_reason: null
+- name: jppfs_cor_CashAndDeposits
+  members:
+  - jppfs_cor_CashAndDeposits
+  parent_subtotal: jppfs_cor_CurrentAssets
+  side: assets
+  sign: nonneg
+  sign_reason: 実測4153社(正のみ)中、負が0社。
+  ratio: 0.971
+  always_include: false
+  include_reason: null
+- name: jppfs_cor_OtherCA
+  members:
+  - jppfs_cor_OtherCA
+  parent_subtotal: jppfs_cor_CurrentAssets
+  side: assets
+  sign: nonneg
+  sign_reason: 実測4077社(正のみ)中、負が0社。
+  ratio: 0.9577
+  always_include: false
+  include_reason: null
+- name: allowance_doubtful_current
+  members:
+  - jppfs_cor_AllowanceForDoubtfulAccountsCA
+  - jppfs_cor_AllowanceForDoubtfulAccountsLeaseReceivablesCA
+  - jppfs_cor_AllowanceForDoubtfulAccountsNotesAndAccountsReceivableTrade
+  - jppfs_cor_AllowanceForDoubtfulAccountsNotesAndAccountsReceivableTradeAndContractAssets
+  - jppfs_cor_AllowanceForDoubtfulAccountsAccountsReceivableTrade
+  - jppfs_cor_AllowanceForDoubtfulAccountsShortTermLoansReceivableFromSubsidiariesAndAffiliates
+  parent_subtotal: jppfs_cor_CurrentAssets
+  side: assets
+  sign: nonpos
+  sign_reason: 実測3,115社(値あり)中、正が0社(ステージ16 A.2)。
+  ratio: 0.7702
+  always_include: true
+  include_reason: "控除科目。売上債権を持つ企業に通常存在し、残余科目が負になる主因(ステージ15: 611社中607社)"
+- name: __OTHER__jppfs_cor_CurrentAssets
+  members: []
+  parent_subtotal: jppfs_cor_CurrentAssets
+  side: assets
+  sign: free
+  sign_reason: 残余科目(差額定義)のため負になりうる(手動指定)。
+  ratio: null
+  always_include: false
+  include_reason: null
+- name: jppfs_cor_PropertyPlantAndEquipment
+  members:
+  - jppfs_cor_PropertyPlantAndEquipment
+  parent_subtotal: jppfs_cor_NoncurrentAssets
+  side: assets
+  sign: nonneg
+  sign_reason: 実測4102社中3社のみ負(いずれも-1,000円ちょうど)。物理的な資産が負になることは会計上ありえず、端数処理由来の外れ値と判断しnonnegとする。
+  ratio: 0.9895
+  always_include: false
+  include_reason: null
+- name: jppfs_cor_IntangibleAssets
+  members:
+  - jppfs_cor_IntangibleAssets
+  parent_subtotal: jppfs_cor_NoncurrentAssets
+  side: assets
+  sign: nonneg
+  sign_reason: 実測3981社(正のみ)中、負が0社。
+  ratio: 0.9713
+  always_include: false
+  include_reason: null
+- name: jppfs_cor_InvestmentsAndOtherAssets
+  members:
+  - jppfs_cor_InvestmentsAndOtherAssets
+  parent_subtotal: jppfs_cor_NoncurrentAssets
+  side: assets
+  sign: nonneg
+  sign_reason: 実測4150社(正のみ)中、負が0社。
+  ratio: 0.9701
+  always_include: false
+  include_reason: null
+- name: allowance_doubtful_noncurrent
+  members:
+  - jppfs_cor_AllowanceForDoubtfulAccountsIOAByGroup
+  - jppfs_cor_AllowanceForInvestmentLoss
+  - jppfs_cor_AllowanceForDoubtfulAccountsClaimsInBankruptcyReorganizationClaimsAndOther
+  - jppfs_cor_AllowanceForDoubtfulAccountsLongTermLoansReceivable
+  - jppfs_cor_AllowanceForDoubtfulAccountsLongTermLoansReceivableFromEmployees
+  parent_subtotal: jppfs_cor_NoncurrentAssets
+  side: assets
+  sign: nonpos
+  sign_reason: 実測(値あり)中、正が0社(ステージ16 A.2)。
+  ratio: 0.6768
+  always_include: true
+  include_reason: 控除科目(投資その他の資産の貸倒引当金等)。従来は投資その他の資産に純額で含まれていた
+- name: __OTHER__jppfs_cor_NoncurrentAssets
+  members: []
+  parent_subtotal: jppfs_cor_NoncurrentAssets
+  side: assets
+  sign: free
+  sign_reason: 残余科目(差額定義)のため負になりうる(手動指定)。
+  ratio: null
+  always_include: false
+  include_reason: null
+- name: short_term_loans
+  members:
+  - jppfs_cor_ShortTermLoansPayable
+  - jppfs_cor_CurrentPortionOfLongTermLoansPayable
+  parent_subtotal: jppfs_cor_CurrentLiabilities
+  side: liabilities
+  sign: nonneg
+  sign_reason: 実測3312社(正のみ)中、負が0社。
+  ratio: 1.0
+  always_include: true
+  include_reason: null
+- name: jppfs_cor_IncomeTaxesPayable
+  members:
+  - jppfs_cor_IncomeTaxesPayable
+  parent_subtotal: jppfs_cor_CurrentLiabilities
+  side: liabilities
+  sign: nonneg
+  sign_reason: 実測4033社(正のみ)中、負が0社。
+  ratio: 0.9551
+  always_include: false
+  include_reason: null
+- name: jppfs_cor_OtherCL
+  members:
+  - jppfs_cor_OtherCL
+  parent_subtotal: jppfs_cor_CurrentLiabilities
+  side: liabilities
+  sign: nonneg
+  sign_reason: 実測3833社(正のみ)中、負が0社。
+  ratio: 0.9063
+  always_include: false
+  include_reason: null
+- name: payables_trade
+  members:
+  - jppfs_cor_AccountsPayableTrade
+  - jppfs_cor_NotesAndAccountsPayableTrade
+  - jppfs_cor_NotesPayableTrade
+  parent_subtotal: jppfs_cor_CurrentLiabilities
+  side: liabilities
+  sign: nonneg
+  sign_reason: 実測3497社(正のみ)中、負が0社。
+  ratio: 0.8612
+  always_include: true
+  include_reason: 運転資本の主要項目。出現率は表記分裂の名残
+- name: accounts_payable_other
+  members:
+  - jppfs_cor_AccountsPayableOther
+  parent_subtotal: jppfs_cor_CurrentLiabilities
+  side: liabilities
+  sign: nonneg
+  sign_reason: 実測2443社(正のみ)中、負が0社。
+  ratio: 0.5726
+  always_include: true
+  include_reason: 未払金。金額規模が大きい
+- name: bonds_current
+  members:
+  - jppfs_cor_CurrentPortionOfBonds
+  parent_subtotal: jppfs_cor_CurrentLiabilities
+  side: liabilities
+  sign: nonneg
+  sign_reason: 実測590社(正のみ)中、負が0社。
+  ratio: 0.1697
+  always_include: true
+  include_reason: null
+- name: __OTHER__jppfs_cor_CurrentLiabilities
+  members: []
+  parent_subtotal: jppfs_cor_CurrentLiabilities
+  side: liabilities
+  sign: free
+  sign_reason: 残余科目(差額定義)のため負になりうる(手動指定)。
+  ratio: null
+  always_include: false
+  include_reason: null
+- name: __OTHER__jppfs_cor_Liabilities
+  members: []
+  parent_subtotal: jppfs_cor_Liabilities
+  side: liabilities
+  sign: free
+  sign_reason: 残余科目(差額定義)のため負になりうる(手動指定)。
+  ratio: null
+  always_include: false
+  include_reason: null
+- name: long_term_loans
+  members:
+  - jppfs_cor_LongTermLoansPayable
+  parent_subtotal: jppfs_cor_NoncurrentLiabilities
+  side: liabilities
+  sign: nonneg
+  sign_reason: 実測2962社(正のみ)中、負が0社。
+  ratio: 0.7238
+  always_include: true
+  include_reason: null
+- name: bonds_noncurrent
+  members:
+  - jppfs_cor_BondsPayable
+  parent_subtotal: jppfs_cor_NoncurrentLiabilities
+  side: liabilities
+  sign: nonneg
+  sign_reason: 実測785社(正のみ)中、負が0社。
+  ratio: 0.2141
+  always_include: true
+  include_reason: null
+- name: __OTHER__jppfs_cor_NoncurrentLiabilities
+  members: []
+  parent_subtotal: jppfs_cor_NoncurrentLiabilities
+  side: liabilities
+  sign: free
+  sign_reason: 残余科目(差額定義)のため負になりうる(手動指定)。
+  ratio: null
+  always_include: false
+  include_reason: null
+- name: non_controlling_interests
+  members:
+  - jppfs_cor_NonControllingInterests
+  parent_subtotal: jppfs_cor_NetAssets
+  side: net_assets
+  sign: free
+  sign_reason: 実測1751社中14社が負。子会社の欠損累積により非支配株主持分相当額が負になるのは正当な会計事象であり、データ誤りではないためfreeとする。
+  ratio: 0.4555
+  always_include: true
+  include_reason: 連結BSの構造上必須
+- name: __OTHER__jppfs_cor_NetAssets
+  members: []
+  parent_subtotal: jppfs_cor_NetAssets
+  side: net_assets
+  sign: free
+  sign_reason: 残余科目(差額定義)のため負になりうる(手動指定)。
+  ratio: null
+  always_include: false
+  include_reason: null
+- name: jppfs_cor_RetainedEarnings
+  members:
+  - jppfs_cor_RetainedEarnings
+  parent_subtotal: jppfs_cor_ShareholdersEquity
+  side: net_assets
+  sign: free
+  sign_reason: 欠損企業で負になるのは正当な会計事象のためfree(手動指定)。
+  ratio: 1.0
+  always_include: false
+  include_reason: null
+- name: jppfs_cor_CapitalStock
+  members:
+  - jppfs_cor_CapitalStock
+  parent_subtotal: jppfs_cor_ShareholdersEquity
+  side: net_assets
+  sign: nonneg
+  sign_reason: 実測4155社(正のみ)中、負が0社。
+  ratio: 0.9998
+  always_include: false
+  include_reason: null
+- name: jppfs_cor_CapitalSurplus
+  members:
+  - jppfs_cor_CapitalSurplus
+  parent_subtotal: jppfs_cor_ShareholdersEquity
+  side: net_assets
+  sign: nonneg
+  sign_reason: 実測4040社(正のみ)中、負が0社。
+  ratio: 0.9776
+  always_include: false
+  include_reason: null
+- name: jppfs_cor_TreasuryStock
+  members:
+  - jppfs_cor_TreasuryStock
+  parent_subtotal: jppfs_cor_ShareholdersEquity
+  side: net_assets
+  sign: nonpos
+  sign_reason: 実測3698社(負のみ)中、正が0社。
+  ratio: 0.9098
+  always_include: false
+  include_reason: null
+- name: __OTHER__jppfs_cor_ShareholdersEquity
+  members: []
+  parent_subtotal: jppfs_cor_ShareholdersEquity
+  side: net_assets
+  sign: free
+  sign_reason: 残余科目(差額定義)のため負になりうる(手動指定)。
+  ratio: null
+  always_include: false
+  include_reason: null
+- name: valuation_difference_securities
+  members:
+  - jppfs_cor_ValuationDifferenceOnAvailableForSaleSecurities
+  parent_subtotal: jppfs_cor_ValuationAndTranslationAdjustments
+  side: net_assets
+  sign: free
+  sign_reason: 実測3161社中、正2981社・負180社(両方あり)。
+  ratio: 0.7841
+  always_include: true
+  include_reason: 純資産の主要変動要因
+- name: __OTHER__jppfs_cor_ValuationAndTranslationAdjustments
+  members: []
+  parent_subtotal: jppfs_cor_ValuationAndTranslationAdjustments
+  side: net_assets
+  sign: free
+  sign_reason: 残余科目(差額定義)のため負になりうる(手動指定)。
+  ratio: null
+  always_include: false
+  include_reason: null
+subtotals:
+- element_id: jppfs_cor_Assets
+  side: assets
+  ratio: 1.0
+- element_id: jppfs_cor_CurrentAssets
+  side: assets
+  ratio: 0.971489
+- element_id: jppfs_cor_NoncurrentAssets
+  side: assets
+  ratio: 0.971489
+- element_id: jppfs_cor_CurrentLiabilities
+  side: liabilities
+  ratio: 0.971489
+- element_id: jppfs_cor_Liabilities
+  side: liabilities
+  ratio: 1.0
+- element_id: jppfs_cor_NoncurrentLiabilities
+  side: liabilities
+  ratio: 0.954195
+- element_id: jppfs_cor_NetAssets
+  side: net_assets
+  ratio: 1.0
+- element_id: jppfs_cor_ShareholdersEquity
+  side: net_assets
+  ratio: 0.999766
+- element_id: jppfs_cor_ValuationAndTranslationAdjustments
+  side: net_assets
+  ratio: 0.849498
+totals:
+  assets: jppfs_cor_Assets
+  liabilities: jppfs_cor_Liabilities
+  net_assets: jppfs_cor_NetAssets
+  liabilities_and_net_assets: jppfs_cor_LiabilitiesAndNetAssets
+# ステージ7 §2.3: 企業ごとに条件付きで有効になる方向制約。
+# treasury_stock: 始点(t=0)で純資産合計が負(債務超過)の企業について、
+# x_treasury(t) >= x_treasury(0) を課す。自己株式は nonpos(0以下)なので、
+# これは「絶対値が増えない(自社株買いをしない)」ことを意味する。
+# 分配可能額のない企業は会社法上、自社株買いができないため。
+direction_constraints:
+- name: jppfs_cor_TreasuryStock
+  condition: net_assets_negative
+  rule: monotone_from_start
+
+# ステージ14 §B: 生成BSの会計的妥当性のための追加制約(射影QPに課す)。
+# 既定はすべて無効(=S0=現行、基礎科目の符号のみ)。段階的に有効にして影響を測る。
+plausibility_constraints:
+  subtotal_nonneg: false                # 小計・総合計(Assets/流動/固定資産、Liabilities/流動/固定負債)>= 0
+  net_assets_non_deterioration: false   # NetAssets(t) >= NetAssets(0)(債務超過の解消は求めないが悪化は禁止)
+  capital_min_ratio: null               # α: 資本金・資本剰余金(t) >= α × 始点(0/0.5/1.0を比較)
+  assets_ratio_range: null              # [下限, 上限] × 始点の総資産(例: [0.5, 2.0])
+  residual_nonneg: false  # 残余科目(8個)の下限(総資産比-1e-3。S5、ステージ16で貸倒引当金追加後は緩和不要)
+  retention_beta: null  # β: 有形固定資産・棚卸資産・売上債権(t) >= β×始点(0/0.3/0.5を比較、ステージ16)

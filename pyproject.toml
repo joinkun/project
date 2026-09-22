@@ -1,0 +1,97 @@
+[project]
+name = "fsgen"
+version = "0.1.0"
+description = "Balance-sheet account-level recourse generation from EDINET XBRL filings"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "lxml>=5.2",
+    "scipy>=1.13",
+    "requests>=2.32",
+    "hydra-core>=1.3",
+    "pydantic>=2.7",
+    "python-dotenv>=1.0",
+    "httpx>=0.28.1",
+    "tqdm>=4.70.1",
+    "matplotlib>=3.11.2",
+    "pot>=0.9.7.post1",
+    "pyarrow>=25.0.1",
+    "cvxpy>=1.9.3",
+    "osqp>=1.1.3",
+    "ecos>=2.0.14",
+    "scikit-learn>=1.5",
+    "lightgbm>=4.5",
+    "torch>=2.4",
+    "cvxpylayers>=0.1.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fsgen"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "N"]
+
+[tool.ruff.lint.per-file-ignores]
+# EDINET API のフィールド名(camelCase)をそのままCSV列名・属性名として使うため。
+"src/fsgen/acquisition/_document_types.py" = ["N815"]
+"src/fsgen/acquisition/_document_fetch.py" = ["N815"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+packages = ["fsgen"]
+disallow_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = [
+    "scipy.*",
+    "hydra.*",
+    "omegaconf.*",
+    "lxml.*",
+    "yaml.*",
+    "tqdm.*",
+    "pandas.*",
+    "ot.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# cvxpy は py.typed だが、動的に生成する属性(sum_squares等)の型情報が
+# 不完全なため、ignore_missing_imports だけでは attr-defined エラーが残る。
+# follow_imports=skip でモジュール内部の解析自体をスキップする。
+module = ["cvxpy.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "lightgbm.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["cvxpylayers.*", "diffcp.*"]
+ignore_missing_imports = true
+follow_imports = "skip"

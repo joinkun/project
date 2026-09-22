@@ -1,0 +1,77 @@
+defaults:
+  - data: fy2024
+  - accounts: core
+  - _self_
+
+seed: 42
+
+# ドライラン時は書類一覧APIのみ叩き document_list.csv を書いて終了する。
+# uv run python pipelines/p01_fetch.py data=fy2024 dry_run=true
+dry_run: false
+
+edinet:
+  api_key_env: EDINET_API_KEY
+  base_url: https://api.edinet-fsa.go.jp/api/v2
+  # 公式仕様書に具体的な数値の記載は無いため、保守的なデフォルトを自前で設定する。
+  min_interval_seconds: 1.0
+  max_retries: 5
+  backoff_base_seconds: 2.0
+
+fetch:
+  # ディスク容量の事前チェック用の1件あたりの見積りサイズ(バイト)。
+  estimated_bytes_per_doc: 5_000_000
+  # true にすると容量不足の確認プロンプトを出さずに続行する(非対話実行用)。
+  # false でも、stdin が tty でない(nohup/バックグラウンド実行等)場合は
+  # プロンプトでハングせず、warning を出して自動的に続行する。
+  assume_yes: false
+
+# 4.3: 符号分類の判定ルール（要素名の正規表現パターン）。
+# 個々の科目は非負がデフォルトで、以下のパターンに一致した場合のみ上書きする。
+sign_rules:
+  non_positive:
+    - ".*AccumulatedDepreciation.*"
+    - ".*AllowanceForDoubtful.*"
+    - ".*TreasuryStock.*"
+  free:
+    - ".*RetainedEarnings.*"
+    - ".*ValuationAndTranslationAdjustments.*"
+
+output:
+  raw_dir: data/raw
+  interim_dir: data/interim
+  processed_dir: data/processed
+
+# 5.1: calculation linkbase (_cal.xml) から貸借対照表を取り出すための設定。
+# role_uri の末尾セグメントをキーに、連結/単体の種別へマッピングする。
+calculation_link:
+  balance_sheet_roles:
+    rol_ConsolidatedBalanceSheet: consolidated
+    rol_BalanceSheet: nonconsolidated
+  standard_prefixes:
+    - jppfs_cor
+    - jpcrp_cor
+    - jpdei_cor
+
+# ステージ6: 最小構成の経路生成(OT + 線形補間)。
+generate:
+  canonical: conf/accounts/core.yaml
+  labels_ja: conf/accounts/labels_ja.yaml
+  aggregated_parquet: data/interim/values/aggregated_core.parquet
+  labels_csv: data/interim/labels/labels.csv
+  output_dir: data/interim/generated
+  k: 13
+  epsilons: [0.01, 0.05, 0.1, 0.5]
+  default_epsilon: 0.05
+  ts: [0.0, 0.25, 0.5, 0.75, 1.0]
+  n_samples: 5
+  seed: 42
+
+# ステージ7: 符号制約つき射影(二次計画)。
+projection:
+  enforce_inactive: false   # true なら x_i=0 の科目を全 t で 0 に固定する
+  mode: every_step          # "every_step" | "endpoint_only"
+  weighted: true            # true なら W=diag(1/(|x_start|+eps))、false なら W=I
+
+hydra:
+  job:
+    chdir: false

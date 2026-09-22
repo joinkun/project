@@ -1,0 +1,183 @@
+# ステージ9: 科目ごとの調整コスト(「動かしにくさ」、大きいほどコストが高い)。
+#
+# 基準: 現金預金(CashAndDeposits) = 1.0。重みの絶対値には意味がなく、
+# 比だけが輸送計画・射影に効く(全体を定数倍しても結果は変わらない)。
+#
+# 出典が明確な科目(receivables_trade, inventories, PropertyPlantAndEquipment,
+# IntangibleAssets, short_term_loans, CapitalStock)はステージ9の指示で
+# 与えられた文献調査結果をそのまま使用した。それ以外の科目は、この調査で
+# 独自に文献を確認したわけではないため、**正直に「根拠不十分。暫定値」と明記し、
+# 値は既知の科目からの類推(運転資本項目・残余科目・資本取引科目などの
+# グルーピング)で埋めた。** 恣意的な値に見えないよう、類推の理由も併記する。
+name: costs
+basis_costs:
+  # --- 資産の部・流動資産 ---
+  - name: __OTHER__jppfs_cor_Assets
+    cost_increase: 5.0
+    cost_decrease: 5.0
+    source: "根拠不十分。暫定値。資産合計の差額調整科目(残余)のため個別の文献はなく、資産側の中庸値を仮定。"
+
+  - name: inventories
+    cost_increase: 3.0
+    cost_decrease: 3.0
+    source: "Seidu (2022): 棚卸資産は運転資本項目中で調整最遅。"
+
+  - name: receivables_trade
+    cost_increase: 2.0
+    cost_decrease: 2.0
+    source: "財務省法人企業統計2024年度: 売上債権回転期間 全産業1.93月。"
+
+  - name: jppfs_cor_CashAndDeposits
+    cost_increase: 1.0
+    cost_decrease: 1.0
+    source: "基準値。Seidu (2022): 運転資本項目中で現金の調整速度が最速。"
+
+  - name: jppfs_cor_OtherCA
+    cost_increase: 2.5
+    cost_decrease: 2.5
+    source: "根拠不十分。暫定値。内訳不明の流動資産の集合(前払費用・未収入金等)のため、運転資本項目とみなしinventoriesとreceivables_tradeの中間値とした。"
+
+  - name: allowance_doubtful_current
+    cost_increase: 2.0
+    cost_decrease: 2.0
+    source: "根拠不十分。暫定値(ステージ16)。控除科目で売上債権の評価に連動するため、receivables_tradeと同じ値を仮定した。"
+
+  - name: __OTHER__jppfs_cor_CurrentAssets
+    cost_increase: 2.5
+    cost_decrease: 2.5
+    source: "根拠不十分。暫定値。残余科目のため個別の文献はなく、流動資産側の平均的コストを仮定。"
+
+  # --- 資産の部・固定資産 ---
+  - name: jppfs_cor_PropertyPlantAndEquipment
+    cost_increase: 5.0
+    cost_decrease: 4.0
+    source: "Kim & Kung (2017) redeployability; Shleifer & Vishny (1992) 困窮時の流動化価値低下。"
+
+  - name: jppfs_cor_IntangibleAssets
+    cost_increase: 8.0
+    cost_decrease: 8.0
+    source: "二次市場がほぼ存在しない。中小企業活性化協議会の資産評価手順で価値の見込めない無形資産は全額減額。"
+
+  - name: jppfs_cor_InvestmentsAndOtherAssets
+    cost_increase: 4.0
+    cost_decrease: 3.0
+    source: "根拠不十分。暫定値。投資有価証券等は二次市場があり有形固定資産より流動性が高いと仮定し、売却(減少)をやや容易とみなした(非対称性はPropertyPlantAndEquipmentからの類推)。"
+
+  - name: allowance_doubtful_noncurrent
+    cost_increase: 4.0
+    cost_decrease: 3.0
+    source: "根拠不十分。暫定値(ステージ16)。控除科目で投資その他の資産の評価に連動するため、jppfs_cor_InvestmentsAndOtherAssetsと同じ値を仮定した。"
+
+  - name: __OTHER__jppfs_cor_NoncurrentAssets
+    cost_increase: 5.0
+    cost_decrease: 5.0
+    source: "根拠不十分。暫定値。残余科目のため個別の文献はなく、固定資産側の平均的コストを仮定。"
+
+  # --- 負債の部・流動負債 ---
+  - name: short_term_loans
+    cost_increase: 4.0 # 困窮企業の新規借入は困難
+    cost_decrease: 3.6 # 1/0.278、岡本(2013)の返済27.8%
+    source: "岡本(2013) 日本上場企業1978-2011: 返済による調整速度27.8%、借入27.3%。リスケジュールは再建実務で最も基本的な施策。"
+
+  - name: jppfs_cor_IncomeTaxesPayable
+    cost_increase: 3.0
+    cost_decrease: 3.0
+    source: "根拠不十分。暫定値。課税所得の計算に機械的に連動し経営者が直接操作しにくい科目のため、運転資本項目よりやや高いコストを仮定。"
+
+  - name: jppfs_cor_OtherCL
+    cost_increase: 2.5
+    cost_decrease: 2.5
+    source: "根拠不十分。暫定値。内訳不明の流動負債の集合のため、payables_tradeに準ずる。"
+
+  - name: payables_trade
+    cost_increase: 2.0
+    cost_decrease: 2.0
+    source: "根拠不十分。暫定値。財務省法人企業統計に買入債務回転期間の統計は存在するが本調査では実測値を確認していないため、receivables_tradeと対称の値を仮定した。"
+
+  - name: accounts_payable_other
+    cost_increase: 2.0
+    cost_decrease: 2.0
+    source: "根拠不十分。暫定値。payables_tradeに準ずる短期の支払債務とみなした。"
+
+  - name: bonds_current
+    cost_increase: 5.0
+    cost_decrease: 5.0
+    source: "根拠不十分。暫定値。社債は債権者が分散し個別交渉が困難とされる一般的知見から、short_term_loansより高いコストを仮定。"
+
+  - name: __OTHER__jppfs_cor_CurrentLiabilities
+    cost_increase: 2.5
+    cost_decrease: 2.5
+    source: "根拠不十分。暫定値。残余科目のため個別の文献はなく、流動負債側の平均的コストを仮定。"
+
+  - name: __OTHER__jppfs_cor_Liabilities
+    cost_increase: 3.0
+    cost_decrease: 3.0
+    source: "根拠不十分。暫定値。負債合計の差額調整科目(残余)のため、負債側の中庸値を仮定。"
+
+  # --- 負債の部・固定負債 ---
+  - name: long_term_loans
+    cost_increase: 5.0
+    cost_decrease: 4.5
+    source: "根拠不十分。暫定値。岡本(2013)のshort_term_loansの値からの類推。長期借入は借換え・新規調達・期限前返済のいずれも交渉に時間を要すると考え上方修正した。"
+
+  - name: bonds_noncurrent
+    cost_increase: 6.0
+    cost_decrease: 6.0
+    source: "根拠不十分。暫定値。社債は債権者分散により再交渉コストが高いとされる一般的知見からbonds_currentに準ずるが、長期社債は据置期間中の任意償還が実務上まれである点を踏まえさらに上方修正した。"
+
+  - name: __OTHER__jppfs_cor_NoncurrentLiabilities
+    cost_increase: 4.0
+    cost_decrease: 4.0
+    source: "根拠不十分。暫定値。残余科目のため個別の文献はなく、固定負債側の平均的コストを仮定。"
+
+  # --- 純資産の部 ---
+  - name: non_controlling_interests
+    cost_increase: 1.0
+    cost_decrease: 1.0
+    source: "non_actionable(§1.3)。値は輸送コストでは巨大値(1e6)に上書きされるため参考値。連結範囲・子会社損益に従属し親会社の直接操作対象ではない。"
+
+  - name: __OTHER__jppfs_cor_NetAssets
+    cost_increase: 4.0
+    cost_decrease: 4.0
+    source: "根拠不十分。暫定値。純資産合計の差額調整科目(残余)のため、純資産側の中庸値を仮定。"
+
+  - name: jppfs_cor_RetainedEarnings
+    cost_increase: 1.0
+    cost_decrease: 1.0
+    source: "non_actionable(§1.3、最重要)。値は輸送コストでは巨大値(1e6)に上書きされるため参考値。当期純利益の累積(損益取引の集積勘定)であり、経営者が直接操作できる科目ではない(リコース文献のimmutable/derived変数概念、複式簿記の代数的定式化の双方から根拠づけられる)。"
+
+  - name: jppfs_cor_CapitalStock
+    cost_increase: 3.0 # 1/0.330、岡本(2013)の増資33.0%
+    cost_decrease: 27.0 # 1/0.037、岡本(2013)の減資3.7%
+    source: "岡本(2013): 増資33.0% vs 減資3.7%。強い方向非対称性。"
+
+  - name: jppfs_cor_CapitalSurplus
+    cost_increase: 3.0
+    cost_decrease: 27.0
+    source: "根拠不十分。暫定値。資本金と同時に増減することが多い資本取引科目のため、CapitalStockと同一の非対称性を仮定した。"
+
+  - name: jppfs_cor_TreasuryStock
+    cost_increase: 4.0
+    cost_decrease: 4.0
+    source: "根拠不十分。暫定値。自社株買い・処分はいずれも市場環境と分配可能額に依存するため対称と仮定した。方向の制約(債務超過企業は自社株買いを増やせない)はステージ7の方向制約で別途担保しているため、コスト自体は中程度とした。"
+
+  - name: __OTHER__jppfs_cor_ShareholdersEquity
+    cost_increase: 4.0
+    cost_decrease: 4.0
+    source: "根拠不十分。暫定値。残余科目のため個別の文献はなく、株主資本側の中庸値を仮定。"
+
+  - name: valuation_difference_securities
+    cost_increase: 1.0
+    cost_decrease: 1.0
+    source: "non_actionable(§1.3)。値は輸送コストでは巨大値(1e6)に上書きされるため参考値。保有有価証券の含み損益(時価変動)であり経営者が直接操作する科目ではない。"
+
+  - name: __OTHER__jppfs_cor_ValuationAndTranslationAdjustments
+    cost_increase: 6.0
+    cost_decrease: 6.0
+    source: "根拠不十分。暫定値。評価・換算差額等の残余科目。valuation_difference_securitiesと同様に含み損益の変動という性質を持つが、指定のnon_actionableリストには含まれていないため、高めの値で近似するにとどめた。"
+
+# 直接操作不可能な科目(§1.3)。方式Aでは輸送コストでcost=1e6として実質固定する。
+non_actionable:
+  - jppfs_cor_RetainedEarnings
+  - valuation_difference_securities
+  - non_controlling_interests
