@@ -85,3 +85,31 @@ evaluate-stage16:  ## ステージ16: canonical再集計(32科目)→輸送→�
 	for t in nearest_na0 nearestu_na0; do for s in 0 1 2; do uv run python scripts/run_generation_stage16.py --tag $$t --plans data/interim/stage16/plans_$$t.npz --seed $$s; done; done
 	uv run python scripts/run_metrics_stage16.py --tags nearest_na0,nearestu_na0 --out D --auc
 	uv run python scripts/run_paired_stage16.py --beta b03
+
+.PHONY: evaluate-stage17
+evaluate-stage17:  ## ステージ17: validity診断(logreg標準化修正)、業種制約の再評価、制約の2層整理
+	uv run pytest -q tests/evaluation/test_classifiers.py tests/accounting/test_plausibility.py
+	uv run python scripts/precompute_stage13_transport.py --designs nearest_na0 --out-dir data/interim/stage17 --industry hard
+	uv run python scripts/precompute_stage13_transport.py --designs nearest_na0 --out-dir data/interim/stage17 --industry soft
+	for ind in indhard indsoft; do for s in 0 1 2; do uv run python scripts/run_generation_stage16.py --tag nearest_na0_$$ind --plans data/interim/stage17/plans_nearest_na0_$$ind.npz --seed $$s --configs W1_S0,W1_S5_a05_b03 --out-dir data/interim/stage17; done; done
+	uv run python scripts/run_metrics_stage16.py --tags nearest_na0,nearest_na0_indhard,nearest_na0_indsoft --configs W1_S0,W1_S5_a05_b03 --dir data/interim/stage17 --out B --auc
+
+.PHONY: evaluate-stage18
+evaluate-stage18:  ## ステージ18: 業種×規模制約の最近傍(5設計)→生成→指標→ペア検定。基準はstage16の生成結果
+	uv run python scripts/precompute_stage18_transport.py --tag d2_hard_none --industry hard --size none
+	uv run python scripts/precompute_stage18_transport.py --tag d3_none_0.5_2 --industry none --size 0.5,2.0
+	uv run python scripts/precompute_stage18_transport.py --tag d4_hard_0.5_2 --industry hard --size 0.5,2.0
+	uv run python scripts/precompute_stage18_transport.py --tag d5_hard_0.33_3 --industry hard --size 0.33,3.0
+	uv run python scripts/precompute_stage18_transport.py --tag d6_soft_0.5_2 --industry soft --size 0.5,2.0
+	for t in d2_hard_none d3_none_0.5_2 d4_hard_0.5_2 d5_hard_0.33_3 d6_soft_0.5_2; do for s in 0 1 2; do uv run python scripts/run_generation_stage16.py --tag $$t --plans data/interim/stage18/plans_$$t.npz --seed $$s --configs W1_S0,W1_S5_a05_b03 --out-dir data/interim/stage18; done; done
+	cp data/interim/stage16/nearest_na0__seed*.parquet data/interim/stage18/
+	uv run python scripts/run_metrics_stage16.py --tags nearest_na0,d2_hard_none,d3_none_0.5_2,d4_hard_0.5_2,d5_hard_0.33_3,d6_soft_0.5_2 --configs W1_S0,W1_S5_a05_b03 --dir data/interim/stage18 --out B --auc
+	uv run python scripts/run_paired_stage18.py
+
+.PHONY: evaluate-stage19
+evaluate-stage19:  ## ステージ19: 違反2社の診断(チェック修正)、規模制約のtrade-off、R1/R3比較
+	uv run pytest -q tests/accounting/test_plausibility.py
+	for s in 0 1 2; do uv run python scripts/run_generation_stage16.py --tag nearest_na0 --plans data/interim/stage16/plans_nearest_na0.npz --seed $$s --configs W1_S5_a05_b03 --freeze no_re --out-dir data/interim/stage18/r3; done
+	uv run python scripts/run_metrics_stage16.py --tags nearest_na0,d3_none_0.5_2 --configs W1_S5_a05_b03 --dir data/interim/stage18 --out stage19_B --auc
+	uv run python scripts/run_metrics_stage16.py --tags nearest_na0 --configs W1_S5_a05_b03 --dir data/interim/stage18/r3 --out r3
+	uv run python scripts/run_tradeoff_stage19.py

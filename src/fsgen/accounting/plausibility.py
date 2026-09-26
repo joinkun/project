@@ -123,6 +123,45 @@ class PlausibilityConfig:
     label: str = field(default="S0", compare=False)
 
 
+@dataclass(frozen=True)
+class ConstraintLayers:
+    """ステージ17 §C.1: 制約を2層に分ける。
+
+    第1層(layer1): 会計恒等式(貸借一致)と各基礎科目の符号。project_onto_feasible が
+    ``extra_constraints`` の有無によらず常に課す不変条件で、会計の定義そのものであり
+    議論の余地がない。**無効化はできない**(layer1=falseはコード上の意味を持たず、
+    設定ミスとして拒否する)。
+    第2層(layer2): このモジュールの PlausibilityConfig が表す制約群(小計非負・純資産
+    非悪化・残余下限・控除後純額・資本金下限α・事業継続β)。実務的妥当性のための
+    設計判断で、無効にすると PlausibilityConfig() (=S0) と同じになる。
+    """
+
+    layer1: bool = True
+    layer2: bool = True
+
+
+def load_constraint_layers(path: Path) -> ConstraintLayers:
+    with path.open(encoding="utf-8") as f:
+        doc = yaml.safe_load(f)
+    raw = doc.get("constraint_layers", {}) or {}
+    layers = ConstraintLayers(
+        layer1=bool(raw.get("layer1", True)), layer2=bool(raw.get("layer2", True))
+    )
+    if not layers.layer1:
+        raise ValueError(
+            "layer1(会計恒等式・符号)は無効化できない。project_onto_feasible の"
+            "不変条件であり、設定ではない。"
+        )
+    return layers
+
+
+def apply_layers(cfg: PlausibilityConfig, layers: ConstraintLayers) -> PlausibilityConfig:
+    """layers.layer2 が False なら、cfg の中身によらず第2層の制約を全て外す(=S0相当)。"""
+    if layers.layer2:
+        return cfg
+    return PlausibilityConfig(label=f"{cfg.label}(layer2 off)")
+
+
 def load_plausibility_config(path: Path) -> PlausibilityConfig:
     with path.open(encoding="utf-8") as f:
         doc = yaml.safe_load(f)
@@ -212,6 +251,7 @@ _NA_TOL = 1e-6  # 数値誤差の許容(tilde空間)
 # 丸め・ソルバ許容(総資産比)。純資産の悪化判定に使う: 極端な高レバレッジ社ではQPの許容
 # (1e-6×max|x|)が総資産比3e-4まで広がる
 _ROUND_TOL = 1e-3
+_LIAB_FLOOR = 0.01  # チェック5の対象: 終点の負債 > 総資産(0)の1%
 
 
 def evaluate_checks(
@@ -244,10 +284,18 @@ def evaluate_checks(
         sub_neg,
         cash1 < _CASH_TOL,
         major_dead,
-        (liab0 > 0) & (liab1 / np.where(liab0 > 0, liab0, 1.0) > 2.0),
+        # 5: 始点の負債がごく小さい社で、わずかな増加が2倍超と判定されないよう、終点の負債が
+        # 総資産(0)の1%を超える場合に限る(ステージ19 §A.2。資本金比と同じ趣旨の絶対額の下限)
+        (liab0 > 0) & (liab1 / np.where(liab0 > 0, liab0, 1.0) > 2.0)
+        & (liab1 / assets0 > _LIAB_FLOOR),
         na1 < na0 - _ROUND_TOL,
-        (na0 > 0) & (na1 < -_NA_TOL),
-        (cs0 > 0) & (cs1 < 0.5 * cs0 - _NA_TOL),  # 絶対許容(比だと資本金が極小の社で誤検出)
+        # 7: 始点の純資産がごく小さい正値の社(68社中1社、0.95%)が丸め程度で負になっても
+        # 数えないよう、6・8と同じ許容 _ROUND_TOL を使う(ステージ19 §A.3)
+        (na0 > 0) & (na1 < -_ROUND_TOL),
+        # 絶対許容(比だと資本金が極小の社で誤検出)。QPの受理判定は 1e-6×scale(円建て)の
+        # 相対許容なので、tilde空間(÷総資産)に直すと大企業では 1e-6 を超えうる
+        # (ステージ18で実測: 4.8e-6)。ソルバ精度の範囲として _ROUND_TOL を使う。
+        (cs0 > 0) & (cs1 < 0.5 * cs0 - _ROUND_TOL),
     ])
     return flags
 
@@ -299,6 +347,9 @@ def check_summary(flags: np.ndarray, doc_ids: list[str]) -> list[dict[str, objec
 
 
 __all__ = [
+    "ConstraintLayers",
+    "apply_layers",
+    "load_constraint_layers",
     "CHECK_NAMES",
     "EXTRA_CHECK_NAMES",
     "RESIDUAL_NONNEG_ACCOUNTS",

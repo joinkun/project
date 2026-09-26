@@ -29,6 +29,8 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 _SEED = 42
 _LOGREG_MAX_ITER = 2000
@@ -84,8 +86,15 @@ def train_classifiers(
     )
     lgb_clf.fit(x_normalized, is_class2.astype(int))
 
-    logreg = LogisticRegression(
-        class_weight="balanced", max_iter=_LOGREG_MAX_ITER, random_state=seed
+    # 特徴量の尺度が科目ごとに大きく異なる(残余科目は最大std~0.35、一部は~0.0002)ため、
+    # LogisticRegressionは標準化が必須(木ベースのlightgbm/random_forestは尺度に不変)。
+    # 標準化を欠いていたステージ13〜16では、生成点のvalidity(logreg)が始点(class2実企業)
+    # 自体より低く出て、識別できていなかった(ステージ17 §A で発見・修正)。
+    # identification.py/metrics.pyの臨時LogRegは元々StandardScalerを使っており、ここだけ
+    # 抜けていた。
+    logreg = make_pipeline(
+        StandardScaler(),
+        LogisticRegression(class_weight="balanced", max_iter=_LOGREG_MAX_ITER, random_state=seed),
     )
     with strict_sklearn_convergence():
         logreg.fit(x_normalized, is_class2.astype(int))

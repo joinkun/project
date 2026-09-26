@@ -387,3 +387,10 @@ plausibility_constraints:
   assets_ratio_range: null              # [下限, 上限] × 始点の総資産(例: [0.5, 2.0])
   residual_nonneg: false  # 残余科目(8個)の下限(総資産比-1e-3。S5、ステージ16で貸倒引当金追加後は緩和不要)
   retention_beta: null  # β: 有形固定資産・棚卸資産・売上債権(t) >= β×始点(0/0.3/0.5を比較、ステージ16)
+
+# ステージ17 §C.1: 制約の2層への整理(論文向け)。layer1(会計恒等式・符号)は
+# project_onto_feasible の不変条件で無効化できない。layer2は上のplausibility_constraints
+# 一式の一括スイッチ(false で PlausibilityConfig() = S0 相当に強制される)。
+constraint_layers:
+  layer1: true
+  layer2: true

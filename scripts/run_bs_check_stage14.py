@@ -38,7 +38,8 @@ _PREV = ("S100TBIV", "S100TODR", "S100VIQU", "S100VFZB", "S100VI0I")
 def main() -> None:  # noqa: PLR0915
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--gen16", default=None,
-                    help="ステージ16の生成結果 TAG:CONFIG(例: nearest_na0:W1_S5_a05_b03)")
+                    help="ステージ16以降の生成結果 TAG:CONFIG(例: nearest_na0:W1_S5_a05_b03)")
+    ap.add_argument("--gen16-dir", default="data/interim/stage16")
     ap.add_argument("--proj", default=None, help="proj_<X>.parquet(再射影)のX。省略時はステージ13")
     ap.add_argument("--stage", default="S0")
     ap.add_argument("--label", default="nn")
@@ -55,7 +56,7 @@ def main() -> None:  # noqa: PLR0915
 
     if args.gen16 is not None:
         g_tag, g_cfg = args.gen16.split(":")
-        files = sorted(glob.glob(f"data/interim/stage16/{g_tag}__seed*.parquet"))
+        files = sorted(glob.glob(f"{args.gen16_dir}/{g_tag}__seed*.parquet"))
         df = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
         df = df[(df["method"] == "PCFM") & (df["config"] == g_cfg)]
     elif args.proj is None:

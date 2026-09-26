@@ -81,6 +81,7 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--configs", default="", help="設定名のカンマ区切り(省略=全設定)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--auc", action="store_true")
+    ap.add_argument("--dir", type=Path, default=_DIR)
     args = ap.parse_args()
 
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
@@ -98,7 +99,7 @@ def main() -> None:  # noqa: PLR0915
     rows: list[dict[str, object]] = []
     base_auc: dict[str, float] = {}
     frames = [pd.read_parquet(f) for t in args.tags.split(",")
-              for f in sorted(_DIR.glob(f"{t}__seed*.parquet"))]
+              for f in sorted(args.dir.glob(f"{t}__seed*.parquet"))]
     allx = pd.concat(frames, ignore_index=True)
     allx = allx[allx["method"] == "PCFM"]
     configs = args.configs.split(",") if args.configs else sorted(allx["config"].unique())
@@ -162,7 +163,7 @@ def main() -> None:  # noqa: PLR0915
                                 "logreg": float(rb["logreg"].mean())}
             rows.append(row)
     out = pd.DataFrame(rows)
-    out.to_csv(_DIR / f"summary_{args.out}.csv", index=False)
+    out.to_csv(args.dir / f"summary_{args.out}.csv", index=False)
     pd.set_option("display.width", 320)
     pd.set_option("display.max_columns", 60)
     pd.set_option("display.max_colwidth", 70)

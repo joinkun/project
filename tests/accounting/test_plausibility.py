@@ -177,3 +177,47 @@ def test_retention_beta_keeps_operating_assets() -> None:
     x, info = project_onto_feasible(y, _SPEC, x_start=x0, extra_constraints=extra)
     assert x[_IDX["inventories"]] >= 0.5 * x0[_IDX["inventories"]] - 1e-7
     assert any(a.startswith("retention:inventories") for a in info.active_constraints)
+
+
+def test_apply_layers_forces_layer2_off_to_s0() -> None:
+    from fsgen.accounting.plausibility import ConstraintLayers, apply_layers
+
+    cfg = PlausibilityConfig(True, True, 0.5, None, True, retention_beta=0.3,
+                             contra_net_nonneg=True, label="full")
+    off = apply_layers(cfg, ConstraintLayers(layer2=False))
+    x0 = _start()
+    assert build_linear_constraints(_SPEC, _NAMES, x0, off) == ()
+    on = apply_layers(cfg, ConstraintLayers(layer2=True))
+    assert on == cfg
+
+
+def test_load_constraint_layers_rejects_layer1_disabled(tmp_path: Path) -> None:
+    from fsgen.accounting.plausibility import load_constraint_layers
+
+    p = tmp_path / "core.yaml"
+    p.write_text("constraint_layers:\n  layer1: false\n  layer2: true\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="layer1"):
+        load_constraint_layers(p)
+
+
+def test_load_constraint_layers_from_core_yaml() -> None:
+    from fsgen.accounting.plausibility import load_constraint_layers
+
+    layers = load_constraint_layers(Path("conf/accounts/core.yaml"))
+    assert layers.layer1 is True
+    assert layers.layer2 is True
+
+
+def test_liability_doubling_ignores_negligible_liabilities() -> None:
+    # 始点の負債が総資産の0.2%: 3倍になっても終点は0.6%(<1%)なので「負債が2倍超」にしない
+    x0 = _start()
+    x0[_IDX["long_term_loans"]] = 0.002
+    x0[_IDX["jppfs_cor_CapitalStock"]] = 1.298
+    y = x0.copy()
+    y[_IDX["long_term_loans"]] = 0.006
+    y[_IDX["jppfs_cor_CashAndDeposits"]] += 0.004
+    assert not evaluate_checks(x0[None, :], y[None, :], _SPEC, _NAMES)[0, 4]
+    z = x0.copy()
+    z[_IDX["long_term_loans"]] = 0.05  # 25倍かつ総資産の5%: 対象
+    z[_IDX["jppfs_cor_CashAndDeposits"]] += 0.048
+    assert evaluate_checks(x0[None, :], z[None, :], _SPEC, _NAMES)[0, 4]

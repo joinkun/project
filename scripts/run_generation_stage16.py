@@ -39,8 +39,11 @@ from fsgen.accounting.constraints import (  # noqa: E402
     state_vector_names,
 )
 from fsgen.accounting.plausibility import (  # noqa: E402
+    ConstraintLayers,
     PlausibilityConfig,
+    apply_layers,
     build_linear_constraints,
+    load_constraint_layers,
 )
 from fsgen.accounting.projection_qp import (  # noqa: E402
     load_direction_constraints,
@@ -71,8 +74,11 @@ _N_LAYERS = 3
 _DELTA = 1e-3
 
 
-def make_configs() -> dict[str, tuple[str, PlausibilityConfig]]:
-    """設定名 -> (重み条件, 追加制約)。"""
+def make_configs(
+    layers: ConstraintLayers | None = None,
+) -> dict[str, tuple[str, PlausibilityConfig]]:
+    """設定名 -> (重み条件, 追加制約)。layers.layer2=False なら全設定が第1層のみ(=S0)になる。"""
+    layers = layers or ConstraintLayers()
     out: dict[str, tuple[str, PlausibilityConfig]] = {
         "W1_S0": ("W1", PlausibilityConfig(label="S0")),
     }
@@ -80,10 +86,11 @@ def make_configs() -> dict[str, tuple[str, PlausibilityConfig]]:
         for alpha, an in ((0.5, "a05"), (1.0, "a10")):
             for beta, bn in ((0.0, "b00"), (0.3, "b03"), (0.5, "b05")):
                 name = f"{cond}_S5_{an}_{bn}"
-                out[name] = (cond, PlausibilityConfig(
+                cfg = PlausibilityConfig(
                     True, True, alpha, None, True, retention_beta=beta or None,
                     contra_net_nonneg=True, label=name,
-                ))
+                )
+                out[name] = (cond, apply_layers(cfg, layers))
     return out
 
 
@@ -113,7 +120,12 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--epochs", type=int, default=_EPOCHS)
     ap.add_argument("--n-folds", type=int, default=_N_FOLDS)
     ap.add_argument("--out-dir", type=Path, default=Path("data/interim/stage16"))
+    ap.add_argument("--layers-from", type=Path, default=None,
+                    help="constraint_layersを読むcore.yaml(省略時は全層有効)")
+    ap.add_argument("--k", type=int, default=_K,
+                    help="低次元基底の次元(既定13。ステージ17 F: 感度確認用に14を1回試す)")
     args = ap.parse_args()
+    layers = load_constraint_layers(args.layers_from) if args.layers_from else ConstraintLayers()
     torch.set_num_threads(1)
 
     spec = load_canonical_spec(_CANONICAL)
@@ -128,7 +140,7 @@ def main() -> None:  # noqa: PLR0915
     w1 = (np.ones(dim), np.ones(dim))
     w3 = cost_vectors(cost_config, names, non_actionable_mode="keep")
     weights_by_cond = {"W1": w1, "W3": w3}
-    configs = make_configs()
+    configs = make_configs(layers)
     if args.configs:
         configs = {k: configs[k] for k in args.configs.split(",")}
 
@@ -166,10 +178,10 @@ def main() -> None:  # noqa: PLR0915
             n0, n1 = plan.shape
             check_plan_health(plan, np.full(n0, 1.0 / n0), None, check_marginals=False)
         pool_idx = idx0 + [idx2[p] for p in train_pos]
-        b = build_reduced_basis(c, x_tilde[pool_idx], k=_K)
+        b = build_reduced_basis(c, x_tilde[pool_idx], k=args.k)
         z0 = x0_tilde @ b
         z_train, z_test = x2_tilde[train_pos] @ b, x2_tilde[test_pos] @ b
-        net = VelocityField(dim=_K, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+        net = VelocityField(dim=args.k, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
         train_fm(z_train, z0, plan_train, net, epochs=args.epochs, lr=_LR, seed=args.seed,
                  z_val=z_test, plan_val=plan_test)
         z_start = x2_tilde[test_pos] @ b
