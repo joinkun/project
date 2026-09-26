@@ -56,10 +56,13 @@ def main() -> None:
     parser.add_argument(
         "--interval", type=float, default=None, help="この秒数ごとに再表示し続ける(省略時は1回だけ)"
     )
+    parser.add_argument(
+        "--suffix", default="", help="提出期間の接尾辞(conf/data/*.yaml の output_suffix)"
+    )
     args = parser.parse_args()
 
-    document_list_csv = args.raw_dir / "index" / "document_list.csv"
-    fetch_log_csv = args.raw_dir / "index" / "fetch_log.csv"
+    document_list_csv = args.raw_dir / "index" / f"document_list{args.suffix}.csv"
+    fetch_log_csv = args.raw_dir / "index" / f"fetch_log{args.suffix}.csv"
 
     if args.interval is None:
         print_status(document_list_csv, fetch_log_csv)

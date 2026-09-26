@@ -8,6 +8,10 @@
 
 実取得(ZIPを data/raw/documents/ に保存):
     uv run python pipelines/p01_fetch.py data=fy2024
+
+出力先は ``cfg.data.output_suffix`` で提出期間ごとに分ける
+(例: ``_2023_2024`` なら data/raw/documents_2023_2024/ と
+index/document_list_2023_2024.csv、index/fetch_log_2023_2024.csv)。
 """
 
 from __future__ import annotations
@@ -55,6 +59,7 @@ def main(cfg: DictConfig) -> None:
 
     raw_dir = Path(cfg.output.raw_dir)
     index_dir = raw_dir / "index"
+    suffix = str(cfg.data.get("output_suffix", ""))
 
     with EdinetClient(
         api_key=api_key,
@@ -71,7 +76,7 @@ def main(cfg: DictConfig) -> None:
             ordinance_codes,
             require_xbrl=cfg.data.require_xbrl,
         )
-        write_document_list_csv(summary, index_dir / "document_list.csv")
+        write_document_list_csv(summary, index_dir / f"document_list{suffix}.csv")
 
         log.info(
             "document list: %d days queried (%d failed), %d raw results, "
@@ -97,6 +102,7 @@ def main(cfg: DictConfig) -> None:
             index_dir,
             estimated_bytes_per_doc=cfg.fetch.estimated_bytes_per_doc,
             assume_yes=cfg.fetch.assume_yes,
+            suffix=suffix,
         )
 
 

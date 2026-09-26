@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import pytest
 from lxml import etree
 
 from fsgen.parsing.instance import (
     CONSOLIDATED_CONTEXT,
     NONCONSOLIDATED_CONTEXT,
+    PRIOR_CONSOLIDATED_CONTEXT,
+    PRIOR_NONCONSOLIDATED_CONTEXT,
     FactValue,
     context_id_for_role,
     context_instant,
@@ -63,6 +66,20 @@ def _parse(body: str) -> etree._Element:
 def test_context_id_for_role() -> None:
     assert context_id_for_role("consolidated") == CONSOLIDATED_CONTEXT
     assert context_id_for_role("nonconsolidated") == NONCONSOLIDATED_CONTEXT
+
+
+def test_context_id_for_role_prior() -> None:
+    assert context_id_for_role("consolidated", "prior") == PRIOR_CONSOLIDATED_CONTEXT
+    assert context_id_for_role("nonconsolidated", "prior") == PRIOR_NONCONSOLIDATED_CONTEXT
+    assert PRIOR_CONSOLIDATED_CONTEXT == "Prior1YearInstant"
+    assert PRIOR_NONCONSOLIDATED_CONTEXT == "Prior1YearInstant_NonConsolidatedMember"
+
+
+def test_context_id_for_role_rejects_unknown() -> None:
+    with pytest.raises(ValueError, match="role"):
+        context_id_for_role("segment")
+    with pytest.raises(ValueError, match="period"):
+        context_id_for_role("consolidated", "prior2")  # type: ignore[arg-type]
 
 
 def test_split_element_id() -> None:

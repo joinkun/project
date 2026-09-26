@@ -1,5 +1,5 @@
-data/
-logs/
+/data/
+/logs/
 .env
 __pycache__/
 *.pyc
@@ -9,6 +9,6 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .hydra/
-outputs/
-multirun/
+/outputs/
+/multirun/
 .DS_Store

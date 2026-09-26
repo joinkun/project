@@ -158,11 +158,16 @@ def fetch_documents(
     assume_yes: bool = False,
     confirm: Callable[[str], bool] = _default_confirm,
     show_progress: bool = True,
+    suffix: str = "",
 ) -> dict[str, FetchLogEntry]:
-    """`records` のZIPを冪等に取得する。再実行しても ok 済みの docID は skip する。"""
-    documents_dir = raw_dir / "documents"
+    """`records` のZIPを冪等に取得する。再実行しても ok 済みの docID は skip する。
+
+    ``suffix`` で提出期間ごとに出力先を分ける(``documents{suffix}/``、
+    ``fetch_log{suffix}.csv``)。空なら既存の構造のまま。
+    """
+    documents_dir = raw_dir / f"documents{suffix}"
     documents_dir.mkdir(parents=True, exist_ok=True)
-    fetch_log_path = index_dir / "fetch_log.csv"
+    fetch_log_path = index_dir / f"fetch_log{suffix}.csv"
     log_entries = _read_fetch_log(fetch_log_path)
 
     pending: list[DocumentRecord] = []

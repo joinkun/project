@@ -9,6 +9,12 @@
 コンテキストIDの規約(実データで確認済み):
 - 連結の当期末: ``CurrentYearInstant``
 - 単体の当期末: ``CurrentYearInstant_NonConsolidatedMember``
+- 連結の前期末: ``Prior1YearInstant``
+- 単体の前期末: ``Prior1YearInstant_NonConsolidatedMember``
+
+前期の命名はステージ21-A で全社集計して確認した(ディメンション無しの
+コンテキストに揺れは無く、社数も当期と一致)。``Prior2YearInstant`` 系は
+株主資本等変動計算書の期首残高で、BS としては使えない。
 
 要素IDから接頭辞・要素名を切り出す際の注意:
 標準要素(jppfs_cor/jpcrp_cor/jpdei_cor)はプレフィックスが既知だが、拡張要素
@@ -24,6 +30,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+from typing import Literal
 
 from lxml import etree
 
@@ -34,17 +41,28 @@ _XSI_NIL = f"{{{_XSI_NS}}}nil"
 
 CONSOLIDATED_CONTEXT = "CurrentYearInstant"
 NONCONSOLIDATED_CONTEXT = "CurrentYearInstant_NonConsolidatedMember"
+PRIOR_CONSOLIDATED_CONTEXT = "Prior1YearInstant"
+PRIOR_NONCONSOLIDATED_CONTEXT = "Prior1YearInstant_NonConsolidatedMember"
+
+Period = Literal["current", "prior"]
+
+_CONTEXTS: dict[tuple[str, str], str] = {
+    ("current", "consolidated"): CONSOLIDATED_CONTEXT,
+    ("current", "nonconsolidated"): NONCONSOLIDATED_CONTEXT,
+    ("prior", "consolidated"): PRIOR_CONSOLIDATED_CONTEXT,
+    ("prior", "nonconsolidated"): PRIOR_NONCONSOLIDATED_CONTEXT,
+}
 
 _STANDARD_PREFIXES = ("jppfs_cor", "jpcrp_cor", "jpdei_cor")
 
 
-def context_id_for_role(used_role: str) -> str:
-    """"consolidated"/"nonconsolidated" -> 対応する当期末コンテキストID。"""
-    if used_role == "consolidated":
-        return CONSOLIDATED_CONTEXT
-    if used_role == "nonconsolidated":
-        return NONCONSOLIDATED_CONTEXT
-    raise ValueError(f"unknown role: {used_role!r}")
+def context_id_for_role(used_role: str, period: Period = "current") -> str:
+    """"consolidated"/"nonconsolidated" -> 対応する期末コンテキストID(当期 or 前期)。"""
+    if used_role not in ("consolidated", "nonconsolidated"):
+        raise ValueError(f"unknown role: {used_role!r}")
+    if period not in ("current", "prior"):
+        raise ValueError(f"unknown period: {period!r}")
+    return _CONTEXTS[(period, used_role)]
 
 
 def split_element_id(

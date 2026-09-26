@@ -1,0 +1,9 @@
+# 提出期間 2024-04-01〜2025-03-31。決算期末は 2024-03 が最多（2,544件）
+# ファイル名の fy2024 は提出年度を指し、会計年度とは 1 年ずれる。
+date_from: "2024-04-01"
+date_to: "2025-03-31"
+doc_type_codes: ["120"]
+ordinance_codes: ["010"]
+require_xbrl: true
+# 出力先の接尾辞。空なら data/raw/documents/ と index/document_list.csv(既存の構造)。
+output_suffix: ""

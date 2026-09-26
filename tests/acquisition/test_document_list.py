@@ -234,6 +234,35 @@ def test_fetch_documents_downloads_and_records_sha256(tmp_path: Path) -> None:
     assert log_rows[0]["status"] == "ok"
 
 
+def test_fetch_documents_suffix_separates_output_dirs(tmp_path: Path) -> None:
+    zip_bytes = _make_zip_bytes(with_cal=True, with_audit_doc=True)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200, content=zip_bytes, headers={"content-type": "application/octet-stream"}
+        )
+
+    record = DocumentRecord.from_api_row(_row("S1000001"))
+    raw_dir = tmp_path / "raw"
+    index_dir = tmp_path / "raw" / "index"
+
+    with _client(handler) as client:
+        fetch_documents(
+            client,
+            (record,),
+            raw_dir,
+            index_dir,
+            assume_yes=True,
+            show_progress=False,
+            suffix="_2023_2024",
+        )
+
+    assert (raw_dir / "documents_2023_2024" / "S1000001.zip").read_bytes() == zip_bytes
+    assert (index_dir / "fetch_log_2023_2024.csv").exists()
+    assert not (raw_dir / "documents").exists()
+    assert not (index_dir / "fetch_log.csv").exists()
+
+
 def test_fetch_documents_skips_already_ok_entries_without_http_call(tmp_path: Path) -> None:
     call_count = 0
 
