@@ -100,6 +100,9 @@ def subtotal_members(spec: CanonicalSpec, names: tuple[str, ...]) -> dict[str, n
     return members
 
 
+_RETAINED_EARNINGS = "jppfs_cor_RetainedEarnings"
+
+
 @dataclass(frozen=True)
 class LinearConstraint:
     """a·x >= rhs(基礎科目の状態ベクトル x に対する線形不等式)。"""
@@ -120,6 +123,8 @@ class PlausibilityConfig:
     residual_nonneg: bool = False  # 実データで負が実質0の残余科目の下限0(RESIDUAL_NONNEG_ACCOUNTS)
     retention_beta: float | None = None  # β: 有形固定資産・棚卸資産・売上債権(t) >= β×始点
     contra_net_nonneg: bool = False  # 控除科目(貸倒引当金)を引いた後の純額が非負(ステージ16)
+    # γ: 利益剰余金の増加 RE(t) - RE(0) <= γ × 総資産(0)(ステージ27、R3 のときに使う)
+    re_growth_cap: float | None = None
     label: str = field(default="S0", compare=False)
 
 
@@ -227,6 +232,13 @@ def build_linear_constraints(
             x0 = float(x_start[idx[nm]])
             beta = cfg.retention_beta
             out.append(LinearConstraint(f"retention:{nm}>={beta:g}*start", a, beta * max(x0, 0.0)))
+    if cfg.re_growth_cap is not None:
+        a = np.zeros(len(names))
+        a[idx[_RETAINED_EARNINGS]] = -1.0
+        a0 = float(members["jppfs_cor_Assets"] @ x_start)
+        cap = cfg.re_growth_cap
+        rhs = -(float(x_start[idx[_RETAINED_EARNINGS]]) + cap * a0)
+        out.append(LinearConstraint(f"RE-RE(0)<={cap:g}*Assets(0)", a, rhs))
     if cfg.assets_ratio_range is not None:
         lo, hi = cfg.assets_ratio_range
         a = members["jppfs_cor_Assets"]

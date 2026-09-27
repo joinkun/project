@@ -46,7 +46,18 @@ from fsgen.evaluation.classifiers import train_classifiers  # noqa: E402
 from fsgen.evaluation.paired import paired_test  # noqa: E402
 from fsgen.evaluation.recovery import net_asset_decomposition, recovery_metrics  # noqa: E402
 
-_CONFIG = "W1_S5_a05_b03"
+_CONFIG = "W1_S5_a05_b03"  # 既定の設定名。ディレクトリに PCFM の設定が 1 つだけならそれを使う
+
+
+def select_pcfm(df: pd.DataFrame) -> pd.DataFrame:
+    """PCFM の行を返す。設定が 1 つだけならそれを、複数あれば _CONFIG を使う(ステージ27)。"""
+    p = df[df["method"] == "PCFM"]
+    configs = sorted(p["config"].unique())
+    if len(configs) > 1:
+        p = p[p["config"] == _CONFIG]
+    if p.empty:
+        raise ValueError(f"PCFM の行がない(configs={configs})")
+    return p
 _SPARSITY_THR = 0.01
 OUTLIERS = ("S100TSS9", "S100TWFQ")  # オンコセラピー・サイエンス、桃太郎源(HANDOFF §8)
 CONTINUOUS = (
@@ -78,7 +89,7 @@ def rows_for_version(
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
     files = sorted(glob.glob(str(directory / version / "nearest_na0__seed*.parquet")))
     df = pd.concat([pd.read_parquet(f) for f in files])
-    df = df[(df["method"] == "PCFM") & (df["config"] == _CONFIG)].reset_index(drop=True)
+    df = select_pcfm(df).reset_index(drop=True)
     x0 = df[[f"x0_{n}" for n in names]].to_numpy()
     x1 = df[[f"x1_{n}" for n in names]].to_numpy()
     d = x1 - x0

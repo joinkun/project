@@ -221,3 +221,31 @@ def test_liability_doubling_ignores_negligible_liabilities() -> None:
     z[_IDX["long_term_loans"]] = 0.05  # 25倍かつ総資産の5%: 対象
     z[_IDX["jppfs_cor_CashAndDeposits"]] += 0.048
     assert evaluate_checks(x0[None, :], z[None, :], _SPEC, _NAMES)[0, 4]
+
+
+def test_re_growth_cap_constraint() -> None:
+    """ステージ27: RE(t) - RE(0) <= γ × 総資産(0) を a·x >= rhs の形で課す。"""
+    from pathlib import Path
+
+    from fsgen.accounting.constraints import load_canonical_spec, state_vector_names
+    from fsgen.accounting.plausibility import (
+        PlausibilityConfig,
+        build_linear_constraints,
+        subtotal_members,
+    )
+
+    spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
+    names = state_vector_names(spec, include_subtotals=False)
+    members = subtotal_members(spec, names)
+    x0 = np.zeros(len(names))
+    x0[names.index("jppfs_cor_CashAndDeposits")] = 1.0  # 総資産 1
+    x0[names.index("jppfs_cor_CapitalStock")] = 1.3
+    x0[names.index("jppfs_cor_RetainedEarnings")] = -0.3
+    assert float(members["jppfs_cor_Assets"] @ x0) == 1.0
+    cons = build_linear_constraints(spec, names, x0, PlausibilityConfig(re_growth_cap=0.5))
+    (c,) = [c for c in cons if c.name.startswith("RE-RE(0)")]
+    ok, bad = x0.copy(), x0.copy()
+    ok[names.index("jppfs_cor_RetainedEarnings")] = 0.2  # +0.5 ちょうど
+    bad[names.index("jppfs_cor_RetainedEarnings")] = 0.21
+    assert c.a @ ok >= c.rhs - 1e-12
+    assert c.a @ bad < c.rhs

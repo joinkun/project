@@ -19,7 +19,18 @@ import pandas as pd
 from fsgen.accounting.constraints import load_canonical_spec, state_vector_names
 from fsgen.viz.balance_sheet import build_bs_lines, load_labels
 
-_CONFIG = "W1_S5_a05_b03"
+_CONFIG = "W1_S5_a05_b03"  # 既定の設定名。ディレクトリに PCFM の設定が 1 つだけならそれを使う
+
+
+def select_pcfm(df: pd.DataFrame) -> pd.DataFrame:
+    """PCFM の行を返す。設定が 1 つだけならそれを、複数あれば _CONFIG を使う(ステージ27)。"""
+    p = df[df["method"] == "PCFM"]
+    configs = sorted(p["config"].unique())
+    if len(configs) > 1:
+        p = p[p["config"] == _CONFIG]
+    if p.empty:
+        raise ValueError(f"PCFM の行がない(configs={configs})")
+    return p
 FIXED = ("S100VFZB", "S100TBIV", "S100VI0I")
 VERSIONS = ("equal", "estimated", "qualitative", "old")
 LABELS = {
@@ -55,7 +66,7 @@ def main() -> None:
     targets: dict[str, pd.DataFrame] = {}
     for v in versions:
         df = pd.read_parquet(args.dir / v / f"nearest_na0__seed{args.seed}.parquet")
-        gen[v] = df[(df["method"] == "PCFM") & (df["config"] == _CONFIG)].set_index("docID")
+        gen[v] = select_pcfm(df).set_index("docID")
         targets[v] = pd.read_csv(args.dir / v / "full_targets_nearest_na0.csv").set_index(
             "source_docID"
         )

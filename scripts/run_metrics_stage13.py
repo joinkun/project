@@ -82,6 +82,7 @@ def paired_table(df: pd.DataFrame, title: str, cafm_methods: tuple[str, ...]) ->
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--tag", default="balanced")
+    ap.add_argument("--dir", type=Path, default=_DIR, help="生成結果のディレクトリ(ステージ27)")
     args = ap.parse_args()
 
     spec = load_canonical_spec(_CANONICAL)
@@ -91,11 +92,11 @@ def main() -> None:
     x_all, is2 = load_real(names)
     clfs = train_classifiers(x_all, is2, seed=42)
 
-    files = sorted(_DIR.glob(f"{args.tag}__*.parquet"))
+    files = sorted(args.dir.glob(f"{args.tag}__*.parquet"))
     gen = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
     print(f"読み込み: {len(files)}ファイル、{len(gen)}行")
     metrics = compute_row_metrics(gen, names, spec, w_plus, w_minus, clfs)
-    metrics.to_csv(_DIR / f"metrics_{args.tag}.csv", index=False)
+    metrics.to_csv(args.dir / f"metrics_{args.tag}.csv", index=False)
 
     print("\n=== 手法×条件の中央値(行ごと=68社×3seed) ===")
     cols = ["proximity_l2", "proximity_cost_weighted", "asset_change", "validity_lightgbm",
@@ -115,14 +116,17 @@ def main() -> None:
         tables.append(t)
     print("\n=== 対比: ステージ10.5(非収束OT)の同じ検定(W1/W2/W3、企業単位に集約) ===")
     for tag, path in _OLD.items():
+        if not path.exists():  # ステージ27: 旧データ(元マシンのみ)が無ければ省く
+            print(f"  {path} が無いため省略")
+            continue
         old = pd.read_csv(path)
         old = old[old["method"].isin(["PCFM_every", "CAFM_scratch", "CAFM_warmstart"])].copy()
         old["method"] = old["method"].map(lambda m: _OLD_NAMES.get(m, m))
         t = paired_table(old, f"ステージ10.5 {tag}(非収束OT)", ("CAFM_scratch", "CAFM_warm"))
         t.insert(0, "条件", f"old_{tag}")
         tables.append(t)
-    pd.concat(tables).to_csv(_DIR / f"paired_{args.tag}.csv", index=False)
-    print(f"\n出力先: {_DIR}")
+    pd.concat(tables).to_csv(args.dir / f"paired_{args.tag}.csv", index=False)
+    print(f"\n出力先: {args.dir}")
 
 
 if __name__ == "__main__":
