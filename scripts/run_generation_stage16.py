@@ -113,6 +113,7 @@ def load_dataset(
 def main() -> None:  # noqa: PLR0915
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--tag", required=True)
+    ap.add_argument("--costs", type=Path, default=_COSTS, help="コスト重み(ステージ24)")
     ap.add_argument("--plans", type=Path, required=True)
     ap.add_argument("--seed", type=int, required=True)
     ap.add_argument("--configs", default="", help="設定名のカンマ区切り(省略=全設定)")
@@ -132,7 +133,7 @@ def main() -> None:  # noqa: PLR0915
     names = state_vector_names(spec, include_subtotals=False)
     c = build_constraint_matrix(spec, include_subtotals=False)
     dcs = load_direction_constraints(_CANONICAL)
-    cost_config = load_cost_config(_COSTS)
+    cost_config = load_cost_config(args.costs)
     frozen = tuple(cost_config.non_actionable)
     if args.freeze == "no_re":
         frozen = tuple(n for n in frozen if n != "jppfs_cor_RetainedEarnings")

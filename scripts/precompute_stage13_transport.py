@@ -145,14 +145,14 @@ def normalized_cost(
 
 
 def run_design(
-    name: str, out_dir: Path = _OUT_DIR, industry: str = "none",
+    name: str, out_dir: Path = _OUT_DIR, industry: str = "none", costs_path: Path = _COSTS,
 ) -> tuple[str, dict[str, object]]:
     t0 = time.perf_counter()
     kind, tau, w_na = parse_design(name)
     out_name = name if industry == "none" else f"{name}_ind{industry}"
     spec = load_canonical_spec(_CANONICAL)
     names = state_vector_names(spec, include_subtotals=False)
-    cc = load_cost_config(_COSTS)
+    cc = load_cost_config(costs_path)
     w_plus, w_minus = cost_vectors(cc, names, non_actionable_mode="keep")
     if kind == "nearestu":  # 重みなし: 全科目1(非操作科目は下でw_naに上書き=重みありと同じ扱い)
         w_plus, w_minus = np.ones(len(names)), np.ones(len(names))
@@ -236,6 +236,9 @@ def run_design(
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--designs", required=True)
+    ap.add_argument(
+        "--costs", type=Path, default=_COSTS, help="コスト重み(ステージ24 で 3 版を切り替える)"
+    )
     ap.add_argument("--out-dir", type=Path, default=_OUT_DIR)
     ap.add_argument("--industry", choices=("none", "hard", "soft"), default="none",
                     help="ステージ17 §B: 業種制約(全designsに一律適用)")
@@ -247,7 +250,11 @@ def main() -> None:
         parse_design(d)  # 名前の検証
     with ProcessPoolExecutor(max_workers=min(len(designs), 8)) as ex:
         results = list(ex.map(
-            run_design, designs, [out_dir] * len(designs), [args.industry] * len(designs),
+            run_design,
+            designs,
+            [out_dir] * len(designs),
+            [args.industry] * len(designs),
+            [args.costs] * len(designs),
         ))
     path = out_dir / "transport_summary.csv"
     new = pd.DataFrame([s for _, s in results])

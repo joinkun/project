@@ -1,0 +1,135 @@
+# ステージ24: scripts/build_costs_stage24.py が生成(手で編集しない)。
+name: costs_estimated
+basis_costs:
+- name: __OTHER__jppfs_cor_Assets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '根拠なし。等重み(補完: 推定なし(残余科目))'
+- name: inventories
+  cost_increase: 0.2207
+  cost_decrease: 0.2207
+  source: 売上高比・差分 GMM(ステージ23.5)λ=0.663、c=0.508。現金預金の c=2.303 で正規化
+- name: receivables_trade
+  cost_increase: 0.1783
+  cost_decrease: 0.1783
+  source: 売上高比・差分 GMM(ステージ23.5)λ=0.709、c=0.411。現金預金の c=2.303 で正規化
+- name: jppfs_cor_CashAndDeposits
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 総資産比・差分 GMM(ステージ23)λ=0.303、c=2.303。現金預金の c=2.303 で正規化
+- name: jppfs_cor_OtherCA
+  cost_increase: 0.2187
+  cost_decrease: 0.2187
+  source: 総資産比・差分 GMM(ステージ23)λ=0.665、c=0.504。現金預金の c=2.303 で正規化
+- name: allowance_doubtful_current
+  cost_increase: 0.3269
+  cost_decrease: 0.3269
+  source: 総資産比・差分 GMM(ステージ23)λ=0.570、c=0.753。現金預金の c=2.303 で正規化
+- name: __OTHER__jppfs_cor_CurrentAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '根拠なし。等重み(補完: 推定なし(残余科目))'
+- name: jppfs_cor_PropertyPlantAndEquipment
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '根拠なし。等重み(補完: 総資産比・差分 GMM(ステージ23)λ=0.001)'
+- name: jppfs_cor_IntangibleAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '根拠なし。等重み(補完: 総資産比・差分 GMM(ステージ23)λ=-0.171)'
+- name: jppfs_cor_InvestmentsAndOtherAssets
+  cost_increase: 0.5155
+  cost_decrease: 0.5155
+  source: 総資産比・差分 GMM(ステージ23)λ=0.457、c=1.187。現金預金の c=2.303 で正規化
+- name: allowance_doubtful_noncurrent
+  cost_increase: 4.2186
+  cost_decrease: 4.2186
+  source: 総資産比・差分 GMM(ステージ23)λ=0.093、c=9.717。現金預金の c=2.303 で正規化
+- name: __OTHER__jppfs_cor_NoncurrentAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '根拠なし。等重み(補完: 推定なし(残余科目))'
+- name: short_term_loans
+  cost_increase: 0.2073
+  cost_decrease: 0.2073
+  source: 総資産比・差分 GMM(ステージ23)λ=0.677、c=0.477。現金預金の c=2.303 で正規化
+- name: jppfs_cor_IncomeTaxesPayable
+  cost_increase: 0.0732
+  cost_decrease: 0.0732
+  source: 総資産比・差分 GMM(ステージ23)λ=0.856、c=0.169。現金預金の c=2.303 で正規化
+- name: jppfs_cor_OtherCL
+  cost_increase: 0.2242
+  cost_decrease: 0.2242
+  source: 総資産比・差分 GMM(ステージ23)λ=0.659、c=0.517。現金預金の c=2.303 で正規化
+- name: payables_trade
+  cost_increase: 0.2948
+  cost_decrease: 0.2948
+  source: 売上高比・差分 GMM(ステージ23.5)λ=0.596、c=0.679。現金預金の c=2.303 で正規化
+- name: accounts_payable_other
+  cost_increase: 0.275
+  cost_decrease: 0.275
+  source: 総資産比・差分 GMM(ステージ23)λ=0.612、c=0.633。現金預金の c=2.303 で正規化
+- name: bonds_current
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '根拠なし。等重み(補完: 総資産比・差分 GMM(ステージ23)λ=1.088)'
+- name: __OTHER__jppfs_cor_CurrentLiabilities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '根拠なし。等重み(補完: 推定なし(残余科目))'
+- name: __OTHER__jppfs_cor_Liabilities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '根拠なし。等重み(補完: 推定なし(残余科目))'
+- name: long_term_loans
+  cost_increase: 0.7354
+  cost_decrease: 0.7354
+  source: 総資産比・差分 GMM(ステージ23)λ=0.371、c=1.694。現金預金の c=2.303 で正規化
+- name: bonds_noncurrent
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '根拠なし。等重み(補完: 総資産比・差分 GMM(ステージ23)λ=-0.028)'
+- name: __OTHER__jppfs_cor_NoncurrentLiabilities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '根拠なし。等重み(補完: 推定なし(残余科目))'
+- name: non_controlling_interests
+  cost_increase: 4.0803
+  cost_decrease: 4.0803
+  source: 総資産比・差分 GMM(ステージ23)λ=0.096、c=9.399。現金預金の c=2.303 で正規化
+- name: __OTHER__jppfs_cor_NetAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '根拠なし。等重み(補完: 推定なし(残余科目))'
+- name: jppfs_cor_RetainedEarnings
+  cost_increase: 1.2682
+  cost_decrease: 1.2682
+  source: 総資産比・差分 GMM(ステージ23)λ=0.255、c=2.921。現金預金の c=2.303 で正規化
+- name: jppfs_cor_CapitalStock
+  cost_increase: 1.595
+  cost_decrease: 1.595
+  source: 総資産比・差分 GMM(ステージ23)λ=0.214、c=3.674。現金預金の c=2.303 で正規化
+- name: jppfs_cor_CapitalSurplus
+  cost_increase: 0.3181
+  cost_decrease: 0.3181
+  source: 総資産比・差分 GMM(ステージ23)λ=0.577、c=0.733。現金預金の c=2.303 で正規化
+- name: jppfs_cor_TreasuryStock
+  cost_increase: 0.9625
+  cost_decrease: 0.9625
+  source: 総資産比・差分 GMM(ステージ23)λ=0.311、c=2.217。現金預金の c=2.303 で正規化
+- name: __OTHER__jppfs_cor_ShareholdersEquity
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '根拠なし。等重み(補完: 推定なし(残余科目))'
+- name: valuation_difference_securities
+  cost_increase: 0.0373
+  cost_decrease: 0.0373
+  source: 総資産比・差分 GMM(ステージ23)λ=0.921、c=0.086。現金預金の c=2.303 で正規化
+- name: __OTHER__jppfs_cor_ValuationAndTranslationAdjustments
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '根拠なし。等重み(補完: 推定なし(残余科目))'
+non_actionable:
+- jppfs_cor_RetainedEarnings
+- valuation_difference_securities
+- non_controlling_interests

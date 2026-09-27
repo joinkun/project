@@ -1,0 +1,135 @@
+# ステージ24: scripts/build_costs_stage24.py が生成(手で編集しない)。
+name: costs_qualitative
+basis_costs:
+- name: __OTHER__jppfs_cor_Assets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: inventories
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: receivables_trade
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: jppfs_cor_CashAndDeposits
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: jppfs_cor_OtherCA
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: allowance_doubtful_current
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: __OTHER__jppfs_cor_CurrentAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: jppfs_cor_PropertyPlantAndEquipment
+  cost_increase: 1.0
+  cost_decrease: 2.0
+  source: '減少(売却)= 2.0。Shleifer & Vishny (1992, JF 47(4)) 要旨: 困窮企業が資産を売る際は同業者も困窮しており、最善の用途の価値を下回る価格での売却になる(要旨で確認)'
+- name: jppfs_cor_IntangibleAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: jppfs_cor_InvestmentsAndOtherAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: allowance_doubtful_noncurrent
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: __OTHER__jppfs_cor_NoncurrentAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: short_term_loans
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: jppfs_cor_IncomeTaxesPayable
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: jppfs_cor_OtherCL
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: payables_trade
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: accounts_payable_other
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: bonds_current
+  cost_increase: 1.0
+  cost_decrease: 2.0
+  source: '減少(返済・再交渉)= 2.0、借入金は 1.0。Gilson, John & Lang (1990, JFE 27) 要旨・本文: 銀行借入の割合が高く貸し手が少ない企業ほど私的な債務再編に成功しやすい(本文で確認)'
+- name: __OTHER__jppfs_cor_CurrentLiabilities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: __OTHER__jppfs_cor_Liabilities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: long_term_loans
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: bonds_noncurrent
+  cost_increase: 1.0
+  cost_decrease: 2.0
+  source: 減少(返済・再交渉)= 2.0、借入金は 1.0。Gilson, John & Lang (1990) による(bonds_current と同じ)
+- name: __OTHER__jppfs_cor_NoncurrentLiabilities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: non_controlling_interests
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: __OTHER__jppfs_cor_NetAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: jppfs_cor_RetainedEarnings
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: jppfs_cor_CapitalStock
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: jppfs_cor_CapitalSurplus
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '減少 = 1.0(最も低い段階のまま)。布袋 (2024): 無償減資は実行頻度が高い(ユーザー確認済み、本ステージでは原典未確認)。既定値と同じため数値は変わらない'
+- name: jppfs_cor_TreasuryStock
+  cost_increase: 1.0
+  cost_decrease: 4.0
+  source: '自己株式の取得(負の値がさらに減る方向)= 4.0。会社法 461 条 1 項: 自己株式の取得等により交付する金銭等の帳簿価額の総額は分配可能額を超えてはならない(e-Gov 法令 API で条文を確認)。分配可能額が 0 の企業(債務超過など)では取得できない。制約は条件付きだが、重みは全社に一律で課す'
+- name: __OTHER__jppfs_cor_ShareholdersEquity
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: valuation_difference_securities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+- name: __OTHER__jppfs_cor_ValuationAndTranslationAdjustments
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 根拠なし。等重み
+non_actionable:
+- jppfs_cor_RetainedEarnings
+- valuation_difference_securities
+- non_controlling_interests

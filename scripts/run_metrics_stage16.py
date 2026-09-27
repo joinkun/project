@@ -81,6 +81,9 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--configs", default="", help="設定名のカンマ区切り(省略=全設定)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--auc", action="store_true")
+    ap.add_argument(
+        "--costs", type=Path, default=Path("conf/accounts/costs.yaml"), help="コスト重み"
+    )
     ap.add_argument("--dir", type=Path, default=_DIR)
     args = ap.parse_args()
 
@@ -88,7 +91,7 @@ def main() -> None:  # noqa: PLR0915
     names = state_vector_names(spec, include_subtotals=False)
     c = build_constraint_matrix(spec, include_subtotals=False)
     m = subtotal_members(spec, names)
-    cc = load_cost_config(Path("conf/accounts/costs.yaml"))
+    cc = load_cost_config(args.costs)
     w_plus, w_minus = cost_vectors(cc, names, non_actionable_mode="keep")
     x_all, is2 = load_real(names)
     clfs = train_classifiers(x_all, is2, seed=42)
