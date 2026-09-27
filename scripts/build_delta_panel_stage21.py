@@ -39,10 +39,15 @@ def _months(earlier: str, later: str) -> int:
     return (int(later[:4]) - int(earlier[:4])) * 12 + int(later[5:7]) - int(earlier[5:7])
 
 
-def load_documents(interim: Path, raw_dir: Path, names: list[str]) -> pd.DataFrame:
+def load_documents(
+    interim: Path,
+    raw_dir: Path,
+    names: list[str],
+    sets: tuple[tuple[str, str], ...] = _SETS,
+) -> pd.DataFrame:
     """全書類の当期・前期の値と検証結果を 1 行 1 書類にまとめる。"""
     frames = []
-    for set_name, suffix in _SETS:
+    for set_name, suffix in sets:
         base = interim / set_name
         chk = pd.read_csv(base / "company_checks.csv", dtype={"docID": str, "edinetCode": str})
         cur = pd.read_csv(base / "values_current.csv", dtype={"docID": str})

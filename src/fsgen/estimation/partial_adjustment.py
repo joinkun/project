@@ -7,9 +7,9 @@
 を推定し、``adjustment_cost`` で c = (1 - λ) / λ に変換する。単年断面では調整コストと
 ショックの変動性を分離できないため(Asker, Collard-Wexler & De Loecker 2014)、パネルで推定する。
 
-入力(``AccountFrame``)は 1 行 = 1 社 × 1 決算年で、2 年分(t0, t1)を持つ。差分と前期の水準は
-同じ書類の当期・前期から取る(ステージ21-D)。そのため t1 の ``y_prev`` と t0 の ``y_cur`` は
-同じ年の水準だが、書類が違うので一致するとは限らない。
+入力は 1 行 = 1 社 × 1 決算年で、連続した 2 年以上を持つ。差分と前期の水準は同じ書類の
+当期・前期から取る(ステージ21-D)。そのため t の ``y_prev`` と t-1 の ``y_cur`` は同じ年の
+水準だが、書類が違うので一致するとは限らない。
 
 目標 y* は 2 通り:
 - ``industry``: 業種中央値 m_t(列 ``target``)。y_t = (1-λ) y_{t-1} + λ m_t + α_i + ε
@@ -18,11 +18,13 @@
 
 推定方法は 2 通り:
 - ``fe``: 固定効果(PanelOLS、企業でクラスタ)。T が短いと Nickell バイアスがある
-- ``diff_gmm``: 1 階差分 + 操作変数(Arellano-Bond 型)。t0 の前期の水準 y_{t0-1} を操作変数に
-  使う。T=3(水準 3 期)では差分式が 1 本しかなく、AR(2) 検定は原理的に計算できない
+- ``diff_gmm``: 1 階差分 + 操作変数(Arellano-Bond 型)。差分式を期ごとに縦に積み、t-2 以前の
+  水準を期ごとの操作変数にする(ステージ23 で差分式 2 本以上に一般化)。AR(2) 検定には
+  水準 5 期以上が必要で、水準 3〜4 期では計算できない
 
 符号別(``direction``)は目標との乖離 y* - y_{t-1} の符号で標本を分ける。positive = 目標より下
-(増やす方向)、negative = 目標より上(減らす方向)。GMM では 2 年とも同じ符号の社に限る。
+(増やす方向)、negative = 目標より上(減らす方向)。GMM では、差分式 t を gap_t と gap_{t-1} が
+同じ符号のときだけ使う(差分式 1 本なら「2 年とも同じ符号の社」と同じ)。
 """
 
 from __future__ import annotations
@@ -98,15 +100,15 @@ def adjustment_cost(lam: float) -> float:
 
 
 def validate_frame(frame: pd.DataFrame, controls: Sequence[str] = ()) -> None:
-    """必要な列があり、(edinetCode, t) が一意で、t がちょうど 2 年であることを確かめる。"""
+    """必要な列があり、(edinetCode, t) が一意で、t が 2 年以上の連続した年であることを確かめる。"""
     missing = [c for c in (*FRAME_COLUMNS, *controls) if c not in frame.columns]
     if missing:
         raise ValueError(f"frame is missing columns: {missing}")
     if frame.duplicated(subset=["edinetCode", "t"]).any():
         raise ValueError("frame has duplicated (edinetCode, t) rows")
     years = sorted(frame["t"].unique())
-    if len(years) != 2 or years[1] - years[0] != 1:
-        raise ValueError(f"frame must have two consecutive years, got {years}")
+    if len(years) < 2 or any(b - a != 1 for a, b in zip(years, years[1:], strict=False)):
+        raise ValueError(f"frame must have two or more consecutive years, got {years}")
 
 
 def _failed(
@@ -158,9 +160,9 @@ def _estimate_fe(
     panel = frame.set_index(["edinetCode", "t"])
     keep = _select(_gap(frame, target, controls), direction).reindex(panel.index)
     sub = panel[keep.to_numpy()]
-    # 企業効果を識別できるのは 2 年とも同じ群にいる社だけ(1 観測の社は寄与しない)
+    # 企業効果を識別できるのは 2 観測以上が同じ群にいる社だけ(1 観測の社は寄与しない)
     counts = sub.groupby(level=0).size()
-    sub = sub[sub.index.get_level_values(0).isin(counts[counts == 2].index)]
+    sub = sub[sub.index.get_level_values(0).isin(counts[counts >= 2].index)]
     n_obs, n_firms = len(sub), sub.index.get_level_values(0).nunique()
     if n_obs < MIN_OBS:
         return _failed(account, target, "fe", direction, "insufficient_obs", n_obs, n_firms)
@@ -182,48 +184,77 @@ def _estimate_gmm(
     direction: Direction,
     controls: Sequence[str],
 ) -> AdjustmentResult:
-    t0, t1 = sorted(frame["t"].unique())
+    """1 階差分の式を期ごとに縦に積み、Arellano-Bond 型の操作変数で GMM 推定する。
+
+    差分式 t(t = 2 年目以降)の操作変数は、t-2 以前の水準(各書類の前期の値)を期ごとの
+    別の列に置いたもの(ブロック対角)。業種中央値の目標では、目標の変化 Δm_t も期ごとの列で
+    操作変数に加える。企業特性の目標では、説明変数の変化 ΔX を外生変数、t-1 以前の書類の X を
+    操作変数に加える。重み行列と標準誤差は企業でクラスタする。符号別では、差分式 t を
+    gap_t と gap_{t-1} が同じ符号のときだけ使う。
+    """
+    years = sorted(frame["t"].unique())
     gap = _gap(frame, target, controls)
     wide = frame.set_index(["edinetCode", "t"]).assign(gap=gap).unstack("t")
-    wide = wide.dropna(subset=[("y_cur", t0), ("y_cur", t1), ("y_prev", t0), ("y_prev", t1)])
-    if direction != "both":
-        sign = 1.0 if direction == "positive" else -1.0
-        same = (np.sign(wide[("gap", t0)]) == sign) & (np.sign(wide[("gap", t1)]) == sign)
-        wide = wide[same]
-    n_firms = len(wide)
-    if n_firms < MIN_OBS:
-        return _failed(account, target, "diff_gmm", direction, "insufficient_obs", n_firms, n_firms)
+    wide = wide.dropna(subset=[(c, t) for c in ("y_cur", "y_prev") for t in years])
 
-    const = pd.DataFrame({"const": np.ones(n_firms)}, index=wide.index)
-    y_lag2 = wide[("y_prev", t0)].rename("y_lag2")  # t0 の前期の水準(差分式の誤差と無相関)
-    if target == "industry":
-        dy0 = wide[("y_cur", t0)] - wide[("y_prev", t0)]
-        dy1 = wide[("y_cur", t1)] - wide[("y_prev", t1)]
-        dep = (dy1 - dy0).rename("ddy")
-        endog = (
-            (wide[("target", t1)] - wide[("y_prev", t1)])
-            - (wide[("target", t0)] - wide[("y_prev", t0)])
-        ).rename("dgap")
-        d_target = (wide[("target", t1)] - wide[("target", t0)]).rename("d_target")
-        instruments = pd.concat([y_lag2, d_target], axis=1)
-        exog = const
-    else:
-        dep = (wide[("y_cur", t1)] - wide[("y_cur", t0)]).rename("dy")
-        endog = (wide[("y_prev", t1)] - wide[("y_prev", t0)]).rename("dy_lag")
-        d_x = pd.concat(
-            [(wide[(c, t1)] - wide[(c, t0)]).rename(f"d_{c}") for c in controls], axis=1
-        )
-        x_lag = pd.concat([wide[(c, t0)].rename(f"{c}_lag") for c in controls], axis=1)
-        exog = pd.concat([const, d_x], axis=1)
-        instruments = pd.concat([y_lag2, x_lag], axis=1)
-    # 分散 0 の操作変数(例: 業種中央値が変わらない)は落とす
+    blocks = []
+    for k in range(1, len(years)):
+        t, tp = years[k], years[k - 1]
+        rows = pd.DataFrame(index=wide.index)
+        rows["_eq"] = t
+        if target == "industry":
+            dy_t = wide[("y_cur", t)] - wide[("y_prev", t)]
+            dy_p = wide[("y_cur", tp)] - wide[("y_prev", tp)]
+            rows["dep"] = dy_t - dy_p
+            rows["endog"] = wide[("gap", t)] - wide[("gap", tp)]
+            rows[f"z_dm_{t}"] = wide[("target", t)] - wide[("target", tp)]
+        else:
+            rows["dep"] = wide[("y_cur", t)] - wide[("y_cur", tp)]
+            rows["endog"] = wide[("y_prev", t)] - wide[("y_prev", tp)]
+            for c in controls:
+                rows[f"d_{c}"] = wide[(c, t)] - wide[(c, tp)]
+        # t-2 以前の水準: 書類 u(u <= t-1)の前期の値 = u-1 年の水準
+        for u in years[:k]:
+            rows[f"z_y{u - 1}_{t}"] = wide[("y_prev", u)]
+            if target == "firm":
+                for c in controls:
+                    rows[f"z_{c}{u}_{t}"] = wide[(c, u)]
+        if direction != "both":
+            sign = 1.0 if direction == "positive" else -1.0
+            same = (np.sign(wide[("gap", t)]) == sign) & (np.sign(wide[("gap", tp)]) == sign)
+            rows = rows[same]
+        blocks.append(rows)
+    data = pd.concat(blocks).fillna(0.0)  # 他の期の操作変数の列は 0(ブロック対角)
+    n_obs = len(data)
+    n_firms = int(data.index.nunique())
+    if n_obs < MIN_OBS:
+        return _failed(account, target, "diff_gmm", direction, "insufficient_obs", n_obs, n_firms)
+
+    eqs = sorted(data["_eq"].unique())
+    exog = pd.DataFrame({f"eq_{t}": (data["_eq"] == t).astype(float) for t in eqs})
+    if target == "firm":
+        exog = pd.concat([exog, data[[f"d_{c}" for c in controls]]], axis=1)
+    instruments = data[[c for c in data.columns if c.startswith("z_")]]
+    # 分散 0 の操作変数(例: 業種中央値が変わらない、群に含まれない期)は落とす
     instruments = instruments.loc[:, instruments.std() > 0]
-    res: Any = IVGMM(dep, exog, endog.to_frame(), instruments).fit(cov_type="robust")
-    coef, coef_se = float(res.params[endog.name]), float(res.std_errors[endog.name])
+    exog = exog.loc[:, (exog.std() > 0) | exog.columns.str.startswith("eq_")]
+    clusters = pd.factorize(data.index)[0]
+    data = data.reset_index(drop=True)
+    exog = exog.reset_index(drop=True)
+    instruments = instruments.reset_index(drop=True)
+    res: Any = IVGMM(
+        data["dep"],
+        exog,
+        data[["endog"]],
+        instruments,
+        weight_type="clustered",
+        clusters=clusters,
+    ).fit(cov_type="clustered", clusters=clusters)
+    coef, coef_se = float(res.params["endog"]), float(res.std_errors["endog"])
     lam = coef if target == "industry" else 1.0 - coef
-    j_df = instruments.shape[1] - 1
+    j_df = int(res.j_stat.df)
     diag = res.first_stage.diagnostics
-    f_stat = float(diag.loc[endog.name, "f.stat"]) / instruments.shape[1]
+    f_stat = float(diag.loc["endog", "f.stat"]) / instruments.shape[1]
     j_stat = float(res.j_stat.stat) if j_df > 0 else None
     j_pval = float(res.j_stat.pval) if j_df > 0 else None
     return AdjustmentResult(
@@ -234,7 +265,7 @@ def _estimate_gmm(
         lam,
         coef_se,
         n_firms,
-        n_firms,
+        n_obs,
         j_stat=j_stat,
         j_pval=j_pval,
         j_df=j_df,

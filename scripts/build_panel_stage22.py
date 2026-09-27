@@ -13,8 +13,11 @@
 フォールバックが発生しただけの社は除外しない(配下に項目が無ければ積み上げた値は正確)。
 
 パネル:
-- A(含む版): 除外後、t = 2023, 2024 の両方の差分がある社
-- B(除く版): A から、2023 年の水準が 2 書類で一致しない社を除く
+- A(含む版): 除外後、対象のすべての年(既定は t = 2023, 2024)の差分がある社
+- B(除く版): A から、重なる年(t-1 年の書類の当期と t 年の書類の前期)の水準が
+  2 書類で一致しない社を除く
+
+ステージ23 では ``build(..., years=(2022, 2023, 2024))`` として 3 年度で使う。
 
 出力: ``<interim>/panel/{panel.csv,firms.csv}``、``results/stage22/panel.md``
 
@@ -48,7 +51,10 @@ REASONS: tuple[tuple[str, str], ...] = (
 
 
 def build(
-    docs: pd.DataFrame, names: list[str], industry33: pd.Series
+    docs: pd.DataFrame,
+    names: list[str],
+    industry33: pd.Series,
+    years: tuple[int, ...] = _YEARS,
 ) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
     ok = (docs["current_status"] == "ok") & (docs["prior_status"] == "ok")
     docs = docs.assign(
@@ -62,7 +68,7 @@ def build(
     ok_docs = docs[ok].sort_values("submitDateTime")
     n_dup = int(ok_docs.duplicated(["edinetCode", "t"], keep="last").sum())
     use = ok_docs.drop_duplicates(["edinetCode", "t"], keep="last")
-    use = use[use["t"].isin(_YEARS)]
+    use = use[use["t"].isin(years)]
 
     firms = pd.DataFrame(index=sorted(set(docs["edinetCode"])))
     by_code = use.groupby("edinetCode")
@@ -79,10 +85,11 @@ def build(
         values=["current_instant", "prior_instant"],
         aggfunc="first",
     )
-    both = wide[("prior_instant", 2024)].notna() & wide[("current_instant", 2023)].notna()
-    broken = both & (wide[("prior_instant", 2024)] != wide[("current_instant", 2023)])
     chain_break = pd.Series(False, index=firms.index)
-    chain_break.loc[broken[broken].index] = True
+    for tp, t in zip(years, years[1:], strict=False):
+        both = wide[("prior_instant", t)].notna() & wide[("current_instant", tp)].notna()
+        broken = both & (wide[("prior_instant", t)] != wide[("current_instant", tp)])
+        chain_break.loc[broken[broken].index] = True
     firms["fiscal_change"] = irregular | chain_break
     n_years = by_code["t"].nunique().reindex(firms.index, fill_value=0)
 
@@ -103,24 +110,25 @@ def build(
             f"| {int(remaining.sum())} |"
         )
     firms["kept"] = remaining
-    firms["panel_a"] = remaining & (n_years == len(_YEARS))
+    firms["panel_a"] = remaining & (n_years == len(years))
 
     lvl = use.set_index(["edinetCode", "t"])
     firms["mismatch_2023"] = False
     firms["mismatch_assets"] = False
     for code in firms.index[firms["panel_a"]]:
-        a = lvl.loc[(code, 2024), [f"prev_{n}" for n in names]].fillna(0).to_numpy()
-        b = lvl.loc[(code, 2023), [f"cur_{n}" for n in names]].fillna(0).to_numpy()
-        firms.loc[code, "mismatch_2023"] = bool((a != b).any())
-        firms.loc[code, "mismatch_assets"] = bool(
-            lvl.loc[(code, 2024), "prev_total_assets"] != lvl.loc[(code, 2023), "cur_total_assets"]
-        )
+        for tp, t in zip(years, years[1:], strict=False):
+            a = lvl.loc[(code, t), [f"prev_{n}" for n in names]].fillna(0).to_numpy()
+            b = lvl.loc[(code, tp), [f"cur_{n}" for n in names]].fillna(0).to_numpy()
+            if (a != b).any():
+                firms.loc[code, "mismatch_2023"] = True
+            if lvl.loc[(code, t), "prev_total_assets"] != lvl.loc[(code, tp), "cur_total_assets"]:
+                firms.loc[code, "mismatch_assets"] = True
     firms["panel_b"] = firms["panel_a"] & ~firms["mismatch_2023"]
     pa = firms["panel_a"]
     lines += [
         "",
         f"2 年とも差分がある社(パネル A): {int(pa.sum())}",
-        f"  うち 2023 年の水準が 2 書類で不一致: {int(firms['mismatch_2023'][pa].sum())}"
+        f"  うち重なる年の水準が 2 書類で不一致: {int(firms['mismatch_2023'][pa].sum())}"
         f"(総資産まで変わる {int(firms['mismatch_assets'][pa].sum())})",
         f"パネル B(不一致を除く): {int(firms['panel_b'].sum())}",
     ]
@@ -136,13 +144,24 @@ def main() -> None:
     parser.add_argument("--labels", type=Path, default=Path("data/interim/labels/labels.csv"))
     parser.add_argument("--industry", type=Path, default=Path("conf/accounts/industry.yaml"))
     parser.add_argument("--out", type=Path, default=Path("results/stage22/panel.md"))
+    parser.add_argument(
+        "--years", type=int, nargs="+", default=list(_YEARS), help="差分の年(当期末の年)"
+    )
+    parser.add_argument(
+        "--sets",
+        nargs="+",
+        default=["fy2024:", "2023_2024:_2023_2024"],
+        help="提出期間の名前と接尾辞(名前:接尾辞)",
+    )
     args = parser.parse_args()
 
     names = [b["name"] for b in yaml.safe_load(args.canonical.read_text())["basis"]]
     industry = yaml.safe_load(args.industry.read_text(encoding="utf-8"))
     ind33 = pd.Series(industry["edinet_industry"])
-    docs = load_documents(args.interim, args.raw_dir, names)
-    panel, firms, lines = build(docs, names, ind33)
+    sets = tuple(tuple(x.split(":", 1)) for x in args.sets)
+    years = tuple(sorted(args.years))
+    docs = load_documents(args.interim, args.raw_dir, names, sets)
+    panel, firms, lines = build(docs, names, ind33, years)
 
     labels = pd.read_csv(args.labels, dtype={"edinetCode": str})
     firms["label"] = labels.groupby("edinetCode")["label"].max().reindex(firms.index)
@@ -155,8 +174,9 @@ def main() -> None:
         out += [
             f"## パネル {title}",
             "",
-            f"- 社数 {len(sel)}、差分の期数 2(2023・2024)、水準の期数 3(2022〜2024)、"
-            f"差分の観測数 {2 * len(sel)}",
+            f"- 社数 {len(sel)}、差分の期数 {len(years)}({'・'.join(map(str, years))})、"
+            f"水準の期数 {len(years) + 1}({years[0] - 1}〜{years[-1]})、"
+            f"差分の観測数 {len(years) * len(sel)}",
             "- class 別: "
             + "、".join(f"class {int(k) if pd.notna(k) else '不明'}: {v}" for k, v in cls.items()),
             "- 粗い業種: " + "、".join(f"{k} {v}" for k, v in sel["coarse"].value_counts().items()),

@@ -18,7 +18,9 @@ from fsgen.estimation.partial_adjustment import (
 _LAM = 0.3
 
 
-def _synthetic(n: int = 20000, lam: float = _LAM, seed: int = 0) -> pd.DataFrame:
+def _synthetic(
+    n: int = 20000, lam: float = _LAM, seed: int = 0, years: tuple[int, ...] = (2023, 2024)
+) -> pd.DataFrame:
     """y_t = (1-λ) y_{t-1} + λ (m_t + a_i) + ε_t を 2022〜2024 年で生成する。
 
     業種 3 つで中央値相当の m_t が年ごとに動く。差分と前期は同じ「書類」から取るので、
@@ -26,15 +28,16 @@ def _synthetic(n: int = 20000, lam: float = _LAM, seed: int = 0) -> pd.DataFrame
     """
     rng = np.random.default_rng(seed)
     industry = rng.integers(0, 3, size=n)
-    m = {2022: np.array([0.2, 0.3, 0.4]), 2023: np.array([0.22, 0.29, 0.43])}
+    m = {2021: np.array([0.21, 0.31, 0.38]), 2022: np.array([0.2, 0.3, 0.4])}
+    m[2023] = np.array([0.22, 0.29, 0.43])
     m[2024] = np.array([0.25, 0.27, 0.41])
     a = rng.normal(0, 0.05, size=n)
-    y = {2021: m[2022][industry] + a + rng.normal(0, 0.1, size=n)}
-    for t in (2022, 2023, 2024):
+    y = {2020: m[2021][industry] + a + rng.normal(0, 0.1, size=n)}
+    for t in (2021, 2022, 2023, 2024):
         y[t] = (1 - lam) * y[t - 1] + lam * (m[t][industry] + a) + rng.normal(0, 0.03, size=n)
     size = rng.normal(10, 1, size=n)
     rows = []
-    for t in (2023, 2024):
+    for t in years:
         rows.append(
             pd.DataFrame(
                 {
@@ -128,3 +131,13 @@ def test_rank_deficiency_is_reported() -> None:
     frame = _synthetic(500).assign(y_prev=0.0, y_cur=0.0, target=0.0)
     res = estimate_adjustment_speed(frame, "x", "fe", "industry")
     assert res.status == "rank_deficient" and math.isnan(res.lam)
+
+
+def test_diff_gmm_with_two_difference_equations() -> None:
+    """水準 4 期(差分式 2 本)では過剰識別の自由度が増え、λ を回復する。"""
+    frame = _synthetic(years=(2022, 2023, 2024))
+    res = estimate_adjustment_speed(frame, "x", "diff_gmm", "industry")
+    assert res.status == "ok"
+    assert res.lam == pytest.approx(_LAM, abs=0.05)
+    assert res.j_df is not None and res.j_df > 1
+    assert res.n_obs == 2 * res.n_firms

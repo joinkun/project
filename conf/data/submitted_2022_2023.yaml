@@ -1,0 +1,8 @@
+# 提出期間 2022-04-01〜2023-03-31。前期比較数値と合わせて 2021年3月期・2022年3月期が得られる(ステージ23)。
+date_from: "2022-04-01"
+date_to: "2023-03-31"
+doc_type_codes: ["120"]
+ordinance_codes: ["010"]
+require_xbrl: true
+# 出力先: data/raw/documents_2022_2023/、index/document_list_2022_2023.csv、index/fetch_log_2022_2023.csv
+output_suffix: "_2022_2023"
