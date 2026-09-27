@@ -39,7 +39,10 @@ def main() -> None:
     ap.add_argument("--dir", type=Path, default=Path("data/interim/stage24"))
     ap.add_argument("--out", type=Path, default=Path("results/stage24/bs"))
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--versions", default=",".join(VERSIONS), help="並べる版(--dir 直下)")
+    ap.add_argument("--title", default="ステージ24 C.3: 同じ 5 社の BS(版ごと)")
     args = ap.parse_args()
+    versions = tuple(args.versions.split(","))
     args.out.mkdir(parents=True, exist_ok=True)
 
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
@@ -50,31 +53,32 @@ def main() -> None:
 
     gen: dict[str, pd.DataFrame] = {}
     targets: dict[str, pd.DataFrame] = {}
-    for v in VERSIONS:
+    for v in versions:
         df = pd.read_parquet(args.dir / v / f"nearest_na0__seed{args.seed}.parquet")
         gen[v] = df[(df["method"] == "PCFM") & (df["config"] == _CONFIG)].set_index("docID")
         targets[v] = pd.read_csv(args.dir / v / "full_targets_nearest_na0.csv").set_index(
             "source_docID"
         )
-    others = sorted(set(gen["equal"].index) - set(FIXED))
+    first = versions[0]
+    others = sorted(set(gen[first].index) - set(FIXED))
     rng = np.random.default_rng(0)
     chosen = [*FIXED, *(str(d) for d in rng.choice(others, size=2, replace=False))]
 
-    index_lines = ["# ステージ24 C.3: 同じ 5 社の BS(版ごと)", ""]
+    index_lines = [f"# {args.title}", ""]
     for doc in chosen:
-        r0 = gen["equal"].loc[doc]
+        r0 = gen[first].loc[doc]
         assets = float(r0["assets_start"])
         xs = r0[x0c].to_numpy(dtype=float) * assets
-        ends = [gen[v].loc[doc][x1c].to_numpy(dtype=float) * assets for v in VERSIONS]
+        ends = [gen[v].loc[doc][x1c].to_numpy(dtype=float) * assets for v in versions]
         lines = build_bs_lines(spec, names, [xs, *ends], labels)
         head = [f"# {r0['filerName']}(docID: {doc})", "", "単位: 百万円。終点は 5 年後(t=1)。", ""]
-        for v in VERSIONS:
+        for v in versions:
             t = targets[v].loc[doc]
             head.append(
-                f"- {LABELS[v]}の対応先: {t['target_name']}(docID {t['target_docID']}、"
+                f"- {LABELS.get(v, v)}の対応先: {t['target_name']}(docID {t['target_docID']}、"
                 f"RE/資産 {t['target_RE_over_assets']:.2f})"
             )
-        cols = ["始点", *(LABELS[v] for v in VERSIONS)]
+        cols = ["始点", *(LABELS.get(v, v) for v in versions)]
         table = ["", "| 科目 | " + " | ".join(cols) + " |", "|---|" + "---:|" * len(cols)]
         for line in lines:
             label = "&nbsp;&nbsp;" * line.indent + line.label

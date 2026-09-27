@@ -118,11 +118,16 @@ def company_level(rows: pd.DataFrame) -> pd.DataFrame:
     return rows.groupby(["version", "docID"]).agg(agg).reset_index()
 
 
-def summarize(comp: pd.DataFrame, exclude: tuple[str, ...]) -> tuple[pd.DataFrame, pd.DataFrame]:
+def summarize(
+    comp: pd.DataFrame,
+    exclude: tuple[str, ...],
+    versions: tuple[str, ...] = VERSIONS,
+    base_name: str = "equal",
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     comp = comp[~comp["docID"].isin(exclude)]
     wide = {v: g.set_index("docID") for v, g in comp.groupby("version")}
     summary_rows = []
-    for v in VERSIONS:
+    for v in versions:
         g = wide[v]
         ins = g[g["insolvent_start"]]
         row: dict[str, object] = {
@@ -137,8 +142,8 @@ def summarize(comp: pd.DataFrame, exclude: tuple[str, ...]) -> tuple[pd.DataFram
             row[m] = float(g[m].median())
         summary_rows.append(row)
     paired_rows = []
-    base = wide["equal"]
-    for v in VERSIONS[1:]:
+    base = wide[base_name]
+    for v in (x for x in versions if x != base_name):
         g = wide[v].reindex(base.index)
         for m, label, better in CONTINUOUS:
             r = paired_test(g[m].to_numpy(), base[m].to_numpy())
@@ -178,7 +183,12 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--dir", type=Path, default=Path("data/interim/stage24"))
     ap.add_argument("--out", type=Path, default=Path("results/stage25"))
+    ap.add_argument(
+        "--versions", default=",".join(VERSIONS), help="比べる版(--dir 直下のディレクトリ名)"
+    )
+    ap.add_argument("--base", default="equal", help="ペア比較の基準にする版")
     args = ap.parse_args()
+    versions = tuple(args.versions.split(","))
     args.out.mkdir(parents=True, exist_ok=True)
 
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
@@ -188,7 +198,7 @@ def main() -> None:
     clfs = train_classifiers(x_all, is2, seed=42)
 
     rows, decs = [], []
-    for v in VERSIONS:
+    for v in versions:
         r, d = rows_for_version(args.dir, v, names, members, clfs)
         rows.append(r)
         decs.append(d)
@@ -196,7 +206,7 @@ def main() -> None:
     long.to_csv(args.out / "rows.csv", index=False)
     comp = company_level(long)
     for tag, excl in (("all68", ()), ("excl_outliers66", OUTLIERS)):
-        summary, paired = summarize(comp, excl)
+        summary, paired = summarize(comp, excl, versions, args.base)
         summary.to_csv(args.out / f"summary_{tag}.csv", index=False)
         paired.to_csv(args.out / f"paired_{tag}.csv", index=False)
         pd.set_option("display.width", 250)
@@ -228,6 +238,8 @@ def main() -> None:
     # 版ごとの重み
     weights: dict[str, dict[str, float]] = {}
     for v, path in COST_FILES.items():
+        if v not in versions:
+            continue
         doc = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
         for a in doc["basis_costs"]:
             weights.setdefault(a["name"], {})[f"{LABELS[v]} w+"] = a["cost_increase"]

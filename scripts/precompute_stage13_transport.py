@@ -37,6 +37,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from fsgen.accounting.constraints import load_canonical_spec, state_vector_names  # noqa: E402
+from fsgen.accounting.plausibility import subtotal_members  # noqa: E402
 from fsgen.models.cost import (  # noqa: E402
     cost_vectors,
     hard_industry_cost,
@@ -46,6 +47,12 @@ from fsgen.models.cost import (  # noqa: E402
     weighted_asymmetric_cost_matrix,
 )
 from fsgen.models.industry import load_industry_config  # noqa: E402
+from fsgen.models.target_filter import (  # noqa: E402
+    TARGET_FILTERS,
+    apply_mask,
+    equity_ratio,
+    target_mask,
+)
 from fsgen.models.transport import (  # noqa: E402
     check_plan_health,
     solve_ot_normalized,
@@ -145,11 +152,20 @@ def normalized_cost(
 
 
 def run_design(
-    name: str, out_dir: Path = _OUT_DIR, industry: str = "none", costs_path: Path = _COSTS,
+    name: str,
+    out_dir: Path = _OUT_DIR,
+    industry: str = "none",
+    costs_path: Path = _COSTS,
+    target_filter: str = "baseline",
+    abs_threshold: float = 0.3,
 ) -> tuple[str, dict[str, object]]:
     t0 = time.perf_counter()
     kind, tau, w_na = parse_design(name)
     out_name = name if industry == "none" else f"{name}_ind{industry}"
+    if target_filter != "baseline":  # ステージ26: 目標分布の絞り込み
+        if industry != "none":
+            raise ValueError("target_filter と industry は同時に使わない")
+        out_name = f"{name}_tf{target_filter}"
     spec = load_canonical_spec(_CANONICAL)
     names = state_vector_names(spec, include_subtotals=False)
     cc = load_cost_config(costs_path)
@@ -173,16 +189,23 @@ def run_design(
         mismatch_full = industry_mismatch(src_lab, tgt_lab)
         n_no_match = int(np.all(mismatch_full, axis=1).sum())  # 同業種のclass0が0社の始点数(§B.3)
 
+    # ステージ26: 自己資本比率による対応先の候補(baseline は全候補)。正規化の後にマスクする
+    members = subtotal_members(spec, names)
+    src_ratio, tgt_ratio = equity_ratio(x2, members), equity_ratio(x0, members)
+    tf = target_mask(target_filter, src_ratio, tgt_ratio, abs_threshold)  # type: ignore[arg-type]
+
     plans: dict[str, np.ndarray] = {}
     base_full = weighted_asymmetric_cost_matrix(x2, x0, w_plus, w_minus)
-    plan_full = solve_plan(kind, tau, normalized_cost(base_full, industry, mismatch_full))
+    cost_full = apply_mask(normalized_cost(base_full, industry, mismatch_full), tf.allowed)
+    plan_full = solve_plan(kind, tau, cost_full)
     plans["plan_full"] = plan_full
     for k in range(_N_FOLDS):
         for tag in ("train", "test"):
             pos = folds[f"{tag}_pos_{k}"]
             base = weighted_asymmetric_cost_matrix(x2[pos], x0, w_plus, w_minus)
             mm = mismatch_full[pos] if mismatch_full is not None else None
-            plans[f"plan_{tag}_{k}"] = solve_plan(kind, tau, normalized_cost(base, industry, mm))
+            cost = apply_mask(normalized_cost(base, industry, mm), tf.allowed[pos])
+            plans[f"plan_{tag}_{k}"] = solve_plan(kind, tau, cost)
     np.savez_compressed(out_dir / f"plans_{out_name}.npz", **plans)  # type: ignore[arg-type]
 
     # 対応先の質・実効サポート・総資産比(全68社→class0)
@@ -221,6 +244,15 @@ def run_design(
         "share_target_over_3x": float(np.mean(a_ratio[alive] > 3.0)),
         "share_target_under_third": float(np.mean(a_ratio[alive] < 1 / 3)),
         "weighted_log10_ratio_median": float(np.median(mean_log_ratio[alive])),
+        "target_filter": target_filter,
+        "target_filter_threshold": tf.threshold,
+        "n_candidates_median": float(np.median(tf.n_candidates)),
+        "n_candidates_min": int(tf.n_candidates.min()),
+        "n_candidates_max": int(tf.n_candidates.max()),
+        "n_fallback_sources": int(tf.fallback.sum()),
+        "n_class0_eligible": int(tf.allowed[~tf.fallback].any(axis=0).sum())
+        if (~tf.fallback).any()
+        else 0,
         "seconds": time.perf_counter() - t0,
     }
     pd.DataFrame({
@@ -229,6 +261,8 @@ def run_design(
         "target_name": [filer[idx0[j]] for j in tg], "target_RE_over_assets": re_t,
         "support": sup, "asset_ratio": a_ratio,
         "source_industry": src_ind, "target_industry": tgt_ind, "industry_match": match,
+        "source_equity_ratio": src_ratio, "target_equity_ratio": tgt_ratio[tg],
+        "n_candidates": tf.n_candidates, "fallback": tf.fallback,
     }).to_csv(out_dir / f"full_targets_{out_name}.csv", index=False)
     return name, summary
 
@@ -239,6 +273,11 @@ def main() -> None:
     ap.add_argument(
         "--costs", type=Path, default=_COSTS, help="コスト重み(ステージ24 で 3 版を切り替える)"
     )
+    ap.add_argument(
+        "--target-filter", choices=TARGET_FILTERS, default="baseline",
+        help="対応先の候補を自己資本比率で絞る(ステージ26)",
+    )
+    ap.add_argument("--abs-threshold", type=float, default=0.3, help="absolute の閾値")
     ap.add_argument("--out-dir", type=Path, default=_OUT_DIR)
     ap.add_argument("--industry", choices=("none", "hard", "soft"), default="none",
                     help="ステージ17 §B: 業種制約(全designsに一律適用)")
@@ -255,6 +294,8 @@ def main() -> None:
             [out_dir] * len(designs),
             [args.industry] * len(designs),
             [args.costs] * len(designs),
+            [args.target_filter] * len(designs),
+            [args.abs_threshold] * len(designs),
         ))
     path = out_dir / "transport_summary.csv"
     new = pd.DataFrame([s for _, s in results])
