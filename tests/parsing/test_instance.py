@@ -13,6 +13,7 @@ from fsgen.parsing.instance import (
     FactValue,
     context_id_for_role,
     context_instant,
+    duration_context_id_for_role,
     read_fact,
     read_text_block_present,
     resolve_element_tag,
@@ -183,3 +184,10 @@ def test_read_text_block_present() -> None:
     element_id = "jpcrp_cor_MaterialMattersRelatingToGoingConcernEtcBusinessRisksTextBlock"
     assert read_text_block_present(root_present, element_id) is True
     assert read_text_block_present(root_absent, element_id) is False
+
+
+def test_duration_context_id_for_role() -> None:
+    assert duration_context_id_for_role("consolidated") == "CurrentYearDuration"
+    assert duration_context_id_for_role("nonconsolidated", "prior") == (
+        "Prior1YearDuration_NonConsolidatedMember"
+    )

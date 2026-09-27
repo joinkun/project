@@ -19,7 +19,11 @@ _LAM = 0.3
 
 
 def _synthetic(
-    n: int = 20000, lam: float = _LAM, seed: int = 0, years: tuple[int, ...] = (2023, 2024)
+    n: int = 20000,
+    lam: float = _LAM,
+    seed: int = 0,
+    years: tuple[int, ...] = (2023, 2024),
+    stationary: bool = False,
 ) -> pd.DataFrame:
     """y_t = (1-λ) y_{t-1} + λ (m_t + a_i) + ε_t を 2022〜2024 年で生成する。
 
@@ -32,7 +36,9 @@ def _synthetic(
     m[2023] = np.array([0.22, 0.29, 0.43])
     m[2024] = np.array([0.25, 0.27, 0.41])
     a = rng.normal(0, 0.05, size=n)
-    y = {2020: m[2021][industry] + a + rng.normal(0, 0.1, size=n)}
+    # stationary=True なら初期値の乖離を定常分布から引く(システム GMM の平均定常性の前提)
+    sd0 = 0.03 / math.sqrt(1 - (1 - lam) ** 2) if stationary else 0.1
+    y = {2020: m[2021][industry] + a + rng.normal(0, sd0, size=n)}
     for t in (2021, 2022, 2023, 2024):
         y[t] = (1 - lam) * y[t - 1] + lam * (m[t][industry] + a) + rng.normal(0, 0.03, size=n)
     size = rng.normal(10, 1, size=n)
@@ -141,3 +147,18 @@ def test_diff_gmm_with_two_difference_equations() -> None:
     assert res.lam == pytest.approx(_LAM, abs=0.05)
     assert res.j_df is not None and res.j_df > 1
     assert res.n_obs == 2 * res.n_firms
+
+
+def test_system_gmm_recovers_lambda_under_mean_stationarity() -> None:
+    frame = _synthetic(years=(2022, 2023, 2024), stationary=True)
+    res = estimate_adjustment_speed(frame, "x", "sys_gmm", "industry")
+    assert res.status == "ok"
+    assert res.lam == pytest.approx(_LAM, abs=0.05)
+    assert res.n_obs == 4 * res.n_firms  # 差分式 2 本 + 水準式 2 本
+    assert res.j_df is not None and res.j_df > 2
+
+
+def test_system_gmm_rejects_firm_target() -> None:
+    frame = _synthetic(200, years=(2022, 2023, 2024)).assign(m=lambda d: d["target"])
+    with pytest.raises(ValueError, match="sys_gmm"):
+        estimate_adjustment_speed(frame, "x", "sys_gmm", "firm", controls=("m",))

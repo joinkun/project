@@ -65,6 +65,12 @@ def context_id_for_role(used_role: str, period: Period = "current") -> str:
     return _CONTEXTS[(period, used_role)]
 
 
+def duration_context_id_for_role(used_role: str, period: Period = "current") -> str:
+    """期間(損益計算書)のコンテキストID。BS の ``context_id_for_role`` の Instant を Duration に
+    置き換えたもの(例: 連結の前期 = ``Prior1YearDuration``)。ステージ23.5 で売上高に使う。"""
+    return context_id_for_role(used_role, period).replace("Instant", "Duration")
+
+
 def split_element_id(
     element_id: str, standard_prefixes: tuple[str, ...] = _STANDARD_PREFIXES
 ) -> tuple[str, str]:

@@ -29,6 +29,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -39,13 +40,13 @@ import pandas as pd
 from linearmodels.iv import IVGMM
 from linearmodels.panel import PanelOLS
 
-Method = Literal["fe", "diff_gmm"]
+Method = Literal["fe", "diff_gmm", "sys_gmm"]
 Direction = Literal["both", "positive", "negative"]
 Target = Literal["industry", "firm"]
 
 FRAME_COLUMNS: tuple[str, ...] = ("edinetCode", "t", "y_prev", "y_cur", "target")
 
-_METHODS: tuple[Method, ...] = ("fe", "diff_gmm")
+_METHODS: tuple[Method, ...] = ("fe", "diff_gmm", "sys_gmm")
 _DIRECTIONS: tuple[Direction, ...] = ("both", "positive", "negative")
 _TARGETS: tuple[Target, ...] = ("industry", "firm")
 MIN_OBS = 30  # これ未満の標本では推定しない(status に理由を残す)
@@ -183,8 +184,14 @@ def _estimate_gmm(
     target: Target,
     direction: Direction,
     controls: Sequence[str],
+    system: bool = False,
 ) -> AdjustmentResult:
     """1 階差分の式を期ごとに縦に積み、Arellano-Bond 型の操作変数で GMM 推定する。
+
+    ``system=True``(ステージ23.5、業種中央値の目標のみ)では Blundell-Bond 型のシステム GMM
+    にする。差分式に加えて水準式 Δy_t = λ gap_t + (α_i + ε_t) を期ごとに積み、1 期前の差分
+    y_{t-1} - y_{t-2}(書類 t の前期 − 書類 t-1 の前期)と目標 m_t を操作変数にする
+    (初期値の平均定常性を仮定)。Windmeijer の小標本補正は linearmodels に無いため行わない。
 
     差分式 t(t = 2 年目以降)の操作変数は、t-2 以前の水準(各書類の前期の値)を期ごとの
     別の列に置いたもの(ブロック対角)。業種中央値の目標では、目標の変化 Δm_t も期ごとの列で
@@ -224,13 +231,25 @@ def _estimate_gmm(
             same = (np.sign(wide[("gap", t)]) == sign) & (np.sign(wide[("gap", tp)]) == sign)
             rows = rows[same]
         blocks.append(rows)
+        if system:
+            lv = pd.DataFrame(index=wide.index)
+            lv["_eq"] = f"l{t}"
+            lv["dep"] = wide[("y_cur", t)] - wide[("y_prev", t)]
+            lv["endog"] = wide[("gap", t)]
+            lv[f"z_ldy_{t}"] = wide[("y_prev", t)] - wide[("y_prev", tp)]
+            lv[f"z_lm_{t}"] = wide[("target", t)]
+            if direction != "both":
+                lv = lv[np.sign(wide[("gap", t)]) == sign]
+            blocks.append(lv)
     data = pd.concat(blocks).fillna(0.0)  # 他の期の操作変数の列は 0(ブロック対角)
     n_obs = len(data)
     n_firms = int(data.index.nunique())
     if n_obs < MIN_OBS:
-        return _failed(account, target, "diff_gmm", direction, "insufficient_obs", n_obs, n_firms)
+        method: Method = "sys_gmm" if system else "diff_gmm"
+        return _failed(account, target, method, direction, "insufficient_obs", n_obs, n_firms)
 
-    eqs = sorted(data["_eq"].unique())
+    eqs = sorted(data["_eq"].astype(str).unique())
+    data["_eq"] = data["_eq"].astype(str)
     exog = pd.DataFrame({f"eq_{t}": (data["_eq"] == t).astype(float) for t in eqs})
     if target == "firm":
         exog = pd.concat([exog, data[[f"d_{c}" for c in controls]]], axis=1)
@@ -260,7 +279,7 @@ def _estimate_gmm(
     return AdjustmentResult(
         account,
         target,
-        "diff_gmm",
+        "sys_gmm" if system else "diff_gmm",
         direction,
         lam,
         coef_se,
@@ -300,6 +319,10 @@ def estimate_adjustment_speed(
     try:
         if method == "fe":
             result = _estimate_fe(data, account, target, direction, controls)
+        elif method == "sys_gmm":
+            if target != "industry":
+                raise ValueError("sys_gmm は業種中央値の目標(target='industry')のみ対応")
+            result = _estimate_gmm(data, account, target, direction, controls, system=True)
         else:
             result = _estimate_gmm(data, account, target, direction, controls)
     except (ValueError, np.linalg.LinAlgError) as exc:
@@ -313,6 +336,9 @@ def estimate_adjustment_speed(
             raise
         n_firms = int(data["edinetCode"].nunique())
         return _failed(account, target, method, direction, status, len(data), n_firms)
-    if result.status == "ok" and not (math.isfinite(result.lam) and math.isfinite(result.se)):
+    if result.status == "ok" and not math.isfinite(result.lam):
         raise ValueError(f"non-finite estimate for {account}: {result}")
+    if result.status == "ok" and not math.isfinite(result.se):
+        # 分散行列の対角が負(数値的に不安定)。λ は残すが、推定値として使えないことを明示する
+        result = dataclasses.replace(result, status="nonfinite_se")
     return result
