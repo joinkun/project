@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from fsgen.parsing._calc_types import CalcArc
 from fsgen.parsing.calculation_link import CalcTree
-from fsgen.parsing.extension import ExtensionRule, extension_local_name, nearest_subtotal
+from fsgen.parsing.extension import (
+    EDINET_INDUSTRY_SUFFIXES,
+    ExtensionRule,
+    extension_local_name,
+    nearest_subtotal,
+)
 
 _EXT = "jpcrp030000-asr_E01329-000_AccountsReceivableTradeAndContractAssets"
 _CA = "jppfs_cor_CurrentAssets"
@@ -65,3 +70,22 @@ def test_resolve_requires_exact_match() -> None:
     tree = _tree([(_ASSETS, _CA), (_CA, near)])
     assert _rule().resolve(near, tree, _SUBTOTALS) is None
     assert _rule().resolve("jppfs_cor_AccountsReceivableTrade", tree, _SUBTOTALS) is None
+
+
+def test_suffix_removal_uses_industry_codes_only() -> None:
+    rule = ExtensionRule.from_members(
+        {"jppfs_cor_AccountsReceivableTrade": "receivables_trade"},
+        {"receivables_trade": _CA},
+        EDINET_INDUSTRY_SUFFIXES,
+    )
+    cns = "jpcrp030000-asr_E00001-000_AccountsReceivableTradeCNS"
+    ca = "jpcrp030000-asr_E00001-000_AccountsReceivableTradeCA"
+    assert rule.match(cns) == ("receivables_trade", "CNS")
+    assert rule.match(ca) is None  # 表示区分の略号は仕様に一覧が無いので除去しない
+    tree = _tree([(_ASSETS, _NCA), (_NCA, cns)])
+    assert rule.resolve(cns, tree, _SUBTOTALS) is None  # 親小計が違えば写像しない
+
+
+def test_industry_suffixes_match_the_official_table() -> None:
+    assert len(EDINET_INDUSTRY_SUFFIXES) == 21
+    assert len(set(EDINET_INDUSTRY_SUFFIXES)) == 21

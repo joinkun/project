@@ -68,6 +68,7 @@ def survey(raw_dir: Path, suffix: str, period: Period, canonical_path: Path, out
                 "kind",  # candidate(局所名が一致) / unmapped_other(写像されず __OTHER__ に残る)
                 "element",
                 "local",
+                "removed_suffix",  # "" = 完全一致、それ以外は除去した業種略号
                 "group",
                 "nearest_subtotal",
                 "expected_parent",
@@ -99,8 +100,9 @@ def survey(raw_dir: Path, suffix: str, period: Period, canonical_path: Path, out
                 # find_bucket と同じ順で祖先を辿り、局所名が一致する最初の拡張要素を探す
                 u = leaf
                 while u not in member_to_name and u not in subtotal_ids:
-                    group = rule.candidate_group(u)
-                    if group is not None:
+                    matched = rule.match(u)
+                    if matched is not None:
+                        group, removed = matched
                         near = nearest_subtotal(u, tree, subtotal_ids)
                         expected = rule.group_parent.get(group)
                         writer.writerow(
@@ -109,6 +111,7 @@ def survey(raw_dir: Path, suffix: str, period: Period, canonical_path: Path, out
                                 "candidate",
                                 u,
                                 extension_local_name(u),
+                                removed,
                                 group,
                                 near,
                                 expected,
@@ -135,6 +138,7 @@ def survey(raw_dir: Path, suffix: str, period: Period, canonical_path: Path, out
                             "",
                             "",
                             "",
+                            "",
                             bucket,
                             value,
                             assets,
@@ -152,9 +156,18 @@ def summarize(interim: Path, financial: set[str], out_csv: Path, out_md: Path) -
     data["parent_match"] = data["parent_match"].astype(str) == "True"
     cand = data[data["kind"] == "candidate"]
     table = (
-        cand.groupby(["element", "local", "group", "nearest_subtotal", "parent_match", "period"])[
-            "docID"
-        ]
+        cand.groupby(
+            [
+                "element",
+                "local",
+                "removed_suffix",
+                "group",
+                "nearest_subtotal",
+                "parent_match",
+                "period",
+            ],
+            dropna=False,
+        )["docID"]
         .nunique()
         .unstack("period", fill_value=0)
         .reset_index()

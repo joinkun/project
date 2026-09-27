@@ -3,6 +3,9 @@ min_ratio: 0.9
 # ステージ21-D: 会社独自の拡張要素を、局所名が members と完全一致し、cal 上で最も近い小計が
 # グループの親小計と一致する場合に同じグループへ写像する(src/fsgen/parsing/extension.py)。
 extension_local_name_mapping: true
+# ステージ22: 完全一致しないとき、局所名の末尾から EDINET の業種略号(設定規約書 図表 1-4-6)を
+# 1 つ除去してから完全一致を判定する。表示区分の略号(CA・CL 等)は仕様に一覧が無いため除去しない。
+extension_suffix_removal: true
 generated_from: data/interim/survey/element_frequency.csv
 basis:
 - name: __OTHER__jppfs_cor_Assets

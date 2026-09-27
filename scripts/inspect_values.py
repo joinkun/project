@@ -50,7 +50,7 @@ from lxml import etree
 from tqdm import tqdm
 
 from fsgen.parsing.calculation_link import CalcTree, parse_calculation_link_bytes, select_tree
-from fsgen.parsing.extension import ExtensionRule
+from fsgen.parsing.extension import EDINET_INDUSTRY_SUFFIXES, ExtensionRule
 from fsgen.parsing.instance import (
     Period,
     context_id_for_role,
@@ -119,6 +119,8 @@ class CanonicalConfig:
     totals: dict[str, str]
     # ステージ21-D: 拡張要素を局所名の完全一致でグループへ写像するか
     extension_local_name_mapping: bool = False
+    # ステージ22: 完全一致しないとき、業種略号を 1 つ除去してから判定するか
+    extension_suffix_removal: bool = False
 
     @property
     def member_to_name(self) -> dict[str, str]:
@@ -143,7 +145,9 @@ class CanonicalConfig:
         if not self.extension_local_name_mapping:
             return None
         return ExtensionRule.from_members(
-            self.member_to_name, {b.name: b.parent_subtotal for b in self.basis}
+            self.member_to_name,
+            {b.name: b.parent_subtotal for b in self.basis},
+            EDINET_INDUSTRY_SUFFIXES if self.extension_suffix_removal else (),
         )
 
 
@@ -169,6 +173,7 @@ def load_canonical(path: Path) -> CanonicalConfig:
         subtotals=subtotals,
         totals=doc["totals"],
         extension_local_name_mapping=bool(doc.get("extension_local_name_mapping", False)),
+        extension_suffix_removal=bool(doc.get("extension_suffix_removal", False)),
     )
 
 
