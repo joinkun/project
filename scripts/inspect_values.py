@@ -22,15 +22,22 @@ ZIP は展開しない。出力は data/interim/values/ 配下。
 §C: 総資産に対する __OTHER__Assets の比率が閾値を超える社を「金融業」
 として `is_financial` フラグ列に記録する(この段階では除外しない)。
 
+ステージ21-A: ``--period prior`` で前期(``Prior1YearInstant`` 系)の値を同じ規則で
+集約する。前期の ``period_ok`` は「前期末が当期末(periodEnd)のちょうど 12 か月前の
+月にあるか」で判定する。
+
 使い方:
     uv run python scripts/inspect_values.py
     uv run python scripts/inspect_values.py --canonical conf/accounts/extended.yaml
+    uv run python scripts/inspect_values.py --period prior \\
+        --output-dir data/interim/stage21/fy2024_prior
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import datetime as dt
 import logging
 import statistics
 from collections import Counter, defaultdict
@@ -44,7 +51,9 @@ from tqdm import tqdm
 
 from fsgen.parsing.calculation_link import CalcTree, parse_calculation_link_bytes, select_tree
 from fsgen.parsing.instance import (
+    Period,
     context_id_for_role,
+    context_instant,
     read_fact,
     read_text_block_present,
     verify_context_period,
@@ -198,6 +207,14 @@ class CompanyValues:
     totals: dict[str, int | None]  # side -> Assets/Liabilities/NetAssets/LiabilitiesAndNetAssets
     assets_decimals: str | None
     assets_unit_ref: str | None
+    instant: str | None = None  # 読んだコンテキストの instant 日付
+
+
+def months_between(earlier: str, later: str) -> int:
+    """YYYY-MM-DD 同士の月数の差(日は無視)。"""
+    a = dt.date.fromisoformat(earlier)
+    b = dt.date.fromisoformat(later)
+    return (b.year - a.year) * 12 + (b.month - a.month)
 
 
 def _failed(doc_id: str, edinet_code: str, filer_name: str, error: Exception) -> CompanyValues:
@@ -232,6 +249,7 @@ def _process_company_inner(
     role_map: dict[str, str],
     standard_prefixes: tuple[str, ...],
     canonical: CanonicalConfig,
+    period: Period = "current",
 ) -> CompanyValues:
     zip_path = documents_dir / f"{doc_id}.zip"
     cal_bytes = read_cal_xml(zip_path)
@@ -242,8 +260,14 @@ def _process_company_inner(
 
     xbrl_bytes = read_instance_xbrl(zip_path)
     root = etree.fromstring(xbrl_bytes)
-    context_id = context_id_for_role(used_role)
-    period_ok = verify_context_period(root, context_id, period_end)
+    context_id = context_id_for_role(used_role, period)
+    instant = context_instant(root, context_id)
+    if period == "current":
+        period_ok = verify_context_period(root, context_id, period_end)
+    else:
+        period_ok = (
+            instant is not None and bool(period_end) and months_between(instant, period_end) == 12
+        )
 
     member_to_name = canonical.member_to_name
     subtotal_ids = canonical.subtotal_ids
@@ -350,6 +374,7 @@ def _process_company_inner(
         totals=totals,
         assets_decimals=assets_decimals,
         assets_unit_ref=assets_unit_ref,
+        instant=instant,
     )
 
 
@@ -362,6 +387,7 @@ def process_company(
     role_map: dict[str, str],
     standard_prefixes: tuple[str, ...],
     canonical: CanonicalConfig,
+    period: Period = "current",
 ) -> CompanyValues:
     try:
         return _process_company_inner(
@@ -373,6 +399,7 @@ def process_company(
             role_map,
             standard_prefixes,
             canonical,
+            period,
         )
     except Exception as exc:  # noqa: BLE001 - 1社の失敗で全体を止めないため意図的に広く捕捉する
         return _failed(doc_id, edinet_code, filer_name, exc)
@@ -383,6 +410,7 @@ def run(
     documents_dir: Path,
     canonical_path: Path,
     show_progress: bool = True,
+    period: Period = "current",
 ) -> tuple[CanonicalConfig, list[CompanyValues]]:
     role_map, standard_prefixes = _load_calc_link_config()
     canonical = load_canonical(canonical_path)
@@ -400,6 +428,7 @@ def run(
                 role_map,
                 standard_prefixes,
                 canonical,
+                period,
             )
         )
     return canonical, results
@@ -680,14 +709,29 @@ def main() -> None:
     parser.add_argument("--documents-dir", type=Path, default=_DEFAULT_DOCUMENTS_DIR)
     parser.add_argument("--canonical", type=Path, default=_DEFAULT_CANONICAL)
     parser.add_argument("--output-dir", type=Path, default=_DEFAULT_OUTPUT_DIR)
+    parser.add_argument("--period", choices=("current", "prior"), default="current")
+    parser.add_argument(
+        "--only-existing",
+        action="store_true",
+        help="ZIP が存在する書類だけを対象にする(取得途中の検証用)",
+    )
     args = parser.parse_args()
 
-    canonical, results = run(args.document_list_csv, args.documents_dir, args.canonical)
+    canonical, results = run(
+        args.document_list_csv, args.documents_dir, args.canonical, period=args.period
+    )
+    if args.only_existing:
+        results = [r for r in results if (args.documents_dir / f"{r.doc_id}.zip").exists()]
 
     csv_path = args.output_dir / "aggregated_core.csv"
     write_aggregated_csv(canonical, results, csv_path)
     write_residuals_csv(canonical, results, args.output_dir / "residuals.csv")
     write_coverage_csv(canonical, results, args.output_dir / "coverage.csv")
+    with (args.output_dir / "context_instants.csv").open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["docID", "period", "instant", "period_ok"])
+        for r in results:
+            writer.writerow([r.doc_id, args.period, r.instant or "", r.period_ok])
 
     # pyarrow があれば parquet も書く(ステージ6以降の下流処理が使う)。
     try:
