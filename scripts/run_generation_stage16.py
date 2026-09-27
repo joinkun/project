@@ -182,6 +182,10 @@ def main() -> None:  # noqa: PLR0915
         b = build_reduced_basis(c, x_tilde[pool_idx], k=args.k)
         z0 = x0_tilde @ b
         z_train, z_test = x2_tilde[train_pos] @ b, x2_tilde[test_pos] @ b
+        # ステージ26: 初期値の乱数を固定してからネットワークを作る。以前は train_fm の中で
+        # 初めて種を設定していたため、fold 0 の初期値だけが実行ごとに変わっていた
+        # (fold 1〜4 は前の fold の学習後の乱数状態を引き継ぐため再現されていた)。
+        torch.manual_seed(args.seed * 1000 + k)
         net = VelocityField(dim=args.k, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
         train_fm(z_train, z0, plan_train, net, epochs=args.epochs, lr=_LR, seed=args.seed,
                  z_val=z_test, plan_val=plan_test)
