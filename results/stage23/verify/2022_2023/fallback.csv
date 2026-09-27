@@ -1,0 +1,12 @@
+subtotal,n_current,n_prior,n_companies
+jppfs_cor_Assets,124,124,4186
+jppfs_cor_CurrentAssets,124,124,4186
+jppfs_cor_NoncurrentAssets,124,124,4186
+jppfs_cor_CurrentLiabilities,124,124,4186
+jppfs_cor_Liabilities,200,188,4186
+jppfs_cor_NoncurrentLiabilities,200,188,4186
+jppfs_cor_NetAssets,589,607,4186
+jppfs_cor_ShareholdersEquity,1,1,4186
+jppfs_cor_ValuationAndTranslationAdjustments,588,606,4186
+ANY,735,750,4186
+ANY_EITHER_PERIOD,787,787,4186

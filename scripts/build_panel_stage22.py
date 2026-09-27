@@ -127,7 +127,7 @@ def build(
     pa = firms["panel_a"]
     lines += [
         "",
-        f"2 年とも差分がある社(パネル A): {int(pa.sum())}",
+        f"対象のすべての年の差分がある社(パネル A): {int(pa.sum())}",
         f"  うち重なる年の水準が 2 書類で不一致: {int(firms['mismatch_2023'][pa].sum())}"
         f"(総資産まで変わる {int(firms['mismatch_assets'][pa].sum())})",
         f"パネル B(不一致を除く): {int(firms['panel_b'].sum())}",
@@ -144,6 +144,7 @@ def main() -> None:
     parser.add_argument("--labels", type=Path, default=Path("data/interim/labels/labels.csv"))
     parser.add_argument("--industry", type=Path, default=Path("conf/accounts/industry.yaml"))
     parser.add_argument("--out", type=Path, default=Path("results/stage22/panel.md"))
+    parser.add_argument("--title", default="ステージ22 B: 推定用パネル")
     parser.add_argument(
         "--years", type=int, nargs="+", default=list(_YEARS), help="差分の年(当期末の年)"
     )
@@ -167,7 +168,7 @@ def main() -> None:
     firms["label"] = labels.groupby("edinetCode")["label"].max().reindex(firms.index)
     firms["coarse"] = firms["industry33"].map(industry["coarse_map"]).fillna("不明")
 
-    out = ["# ステージ22 B: 推定用パネル", "", *lines, ""]
+    out = [f"# {args.title}", "", *lines, ""]
     for key, title in (("panel_a", "A(不一致を含む)"), ("panel_b", "B(不一致を除く)")):
         sel = firms[firms[key]]
         cls = sel["label"].value_counts(dropna=False).sort_index()

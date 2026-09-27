@@ -302,13 +302,17 @@ def estimate_adjustment_speed(
             result = _estimate_fe(data, account, target, direction, controls)
         else:
             result = _estimate_gmm(data, account, target, direction, controls)
-    except ValueError as exc:
+    except (ValueError, np.linalg.LinAlgError) as exc:
         # 説明変数・操作変数が線形従属(例: ほぼ全社で 0 の科目、符号別の小さな群)。
         # 黙って捨てず、推定できなかった理由として status に残す。それ以外の例外は止める。
-        if "full column rank" not in str(exc) and "rank" not in str(exc):
+        if isinstance(exc, np.linalg.LinAlgError):
+            status = "singular_matrix"
+        elif "rank" in str(exc):
+            status = "rank_deficient"
+        else:
             raise
         n_firms = int(data["edinetCode"].nunique())
-        return _failed(account, target, method, direction, "rank_deficient", len(data), n_firms)
+        return _failed(account, target, method, direction, status, len(data), n_firms)
     if result.status == "ok" and not (math.isfinite(result.lam) and math.isfinite(result.se)):
         raise ValueError(f"non-finite estimate for {account}: {result}")
     return result

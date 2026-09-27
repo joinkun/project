@@ -7,7 +7,8 @@ D.1 の条件(すべて満たす科目だけ costs.yaml の更新候補):
 1. λ ∈ (0, 1]
 2. 第 1 段階の F ≥ 10
 3. Hansen 検定が棄却されない(p ≥ 0.05)
-4. 文献値と大きく矛盾しない。定義: 文献値のある科目は 95% 信頼区間が文献値の範囲と重なる。
+4. 文献値と大きく矛盾しない。定義: 文献値のある科目は 95% 信頼区間が文献値の範囲と重なる
+   (資本金は増資・減資の符号別の推定値がどちらも重なる)。
    Seidu(2022) の順位だけが根拠の現金・棚卸資産は、運転資本 4 科目の中で現金が最速・
    棚卸資産が最遅であること。文献値の無い科目は「該当なし」として通す
 
@@ -168,8 +169,8 @@ def main() -> None:
         a3 = _row(e3p, acc, target, method, direction)
         a4 = _row(e4p, acc, target, method, direction)
         overlap = not math.isnan(a4["lam"]) and a4["ci_low"] <= hi and lo <= a4["ci_high"]
-        if direction == "both":
-            lit_ok[acc] = overlap
+        # 符号別にしか文献値が無い科目(資本金)は、すべての方向で重なることを条件にする
+        lit_ok[acc] = lit_ok.get(acc, True) and overlap
         lit = f"{lo}" if lo == hi else f"{lo}〜{hi}"
         lines.append(
             f"| {acc} | {direction} | {lit} | {src} | {a3['lam']:.3f} | {a4['lam']:.3f} "
