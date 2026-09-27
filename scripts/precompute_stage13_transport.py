@@ -38,6 +38,11 @@ import pandas as pd  # noqa: E402
 
 from fsgen.accounting.constraints import load_canonical_spec, state_vector_names  # noqa: E402
 from fsgen.accounting.plausibility import subtotal_members  # noqa: E402
+from fsgen.datasets.exclusion import (  # noqa: E402
+    exclusion_masks,
+    load_excluded_docs,
+    subset_folds,
+)
 from fsgen.models.cost import (  # noqa: E402
     cost_vectors,
     hard_industry_cost,
@@ -119,19 +124,25 @@ def solve_plan(kind: str, tau: float, cost_n: np.ndarray) -> np.ndarray:
 
 def load_data(
     names: tuple[str, ...],
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str], list[str], list[str]]:
+    excluded: frozenset[str] = frozenset(),
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str], list[str], list[str], np.ndarray]:
+    """最後の要素は、除外前の class 2 の並びで残す始点(ステージ28 の除外、fold の絞り込み用)。"""
     agg = pd.read_csv(_AGGREGATED_CSV, dtype={"docID": str})
     agg = agg[(agg["parse_status"] == "ok") & (agg["is_financial"].astype(str) != "True")]
     lab = pd.read_csv(_LABELS_CSV, dtype={"docID": str})
     lab = lab[pd.to_numeric(lab["label"], errors="coerce").notna()]
     m = agg.merge(lab[["docID", "filerName", "label"]], on="docID", how="inner")
     m = m[m["total_assets"].notna() & (m["total_assets"] != 0)]
+    row_keep, src_keep = exclusion_masks(
+        m["docID"].tolist(), m["label"].astype(int).tolist(), excluded
+    )
+    m = m[row_keep]
     assets = m["total_assets"].to_numpy(dtype=float)
     x = m[list(names)].fillna(0.0).to_numpy(dtype=float) / assets[:, None]
     labels = m["label"].astype(int).to_numpy()
     return (
         x, assets, labels, m["docID"].tolist(), m["filerName"].tolist(),
-        m["edinetCode"].astype(str).tolist(),
+        m["edinetCode"].astype(str).tolist(), src_keep,
     )
 
 
@@ -158,6 +169,7 @@ def run_design(
     costs_path: Path = _COSTS,
     target_filter: str = "baseline",
     abs_threshold: float = 0.3,
+    exclude_path: Path | None = None,
 ) -> tuple[str, dict[str, object]]:
     t0 = time.perf_counter()
     kind, tau, w_na = parse_design(name)
@@ -175,10 +187,12 @@ def run_design(
     for i, n in enumerate(names):
         if n in set(cc.non_actionable):
             w_plus[i] = w_minus[i] = w_na
-    x, assets, label, doc, filer, edinet = load_data(names)
+    x, assets, label, doc, filer, edinet, src_keep = load_data(
+        names, load_excluded_docs(exclude_path)
+    )
     idx0, idx2 = np.where(label == 0)[0], np.where(label == 2)[0]
     x0, x2 = x[idx0], x[idx2]
-    folds = np.load(_FOLDS)
+    folds = subset_folds(np.load(_FOLDS), src_keep)  # 除外なしなら元の分割のまま
 
     mismatch_full = None
     n_no_match = 0
@@ -281,6 +295,8 @@ def main() -> None:
     ap.add_argument("--out-dir", type=Path, default=_OUT_DIR)
     ap.add_argument("--industry", choices=("none", "hard", "soft"), default="none",
                     help="ステージ17 §B: 業種制約(全designsに一律適用)")
+    ap.add_argument("--exclude", type=Path, default=None,
+                    help="除外する書類の CSV(列 docID、ステージ28)")
     args = ap.parse_args()
     out_dir: Path = args.out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -296,6 +312,7 @@ def main() -> None:
             [args.costs] * len(designs),
             [args.target_filter] * len(designs),
             [args.abs_threshold] * len(designs),
+            [args.exclude] * len(designs),
         ))
     path = out_dir / "transport_summary.csv"
     new = pd.DataFrame([s for _, s in results])

@@ -42,6 +42,7 @@ from fsgen.accounting.plausibility import (  # noqa: E402
     evaluate_extra_checks,
     subtotal_members,
 )
+from fsgen.datasets.exclusion import load_excluded_docs  # noqa: E402
 from fsgen.evaluation.classifiers import train_classifiers  # noqa: E402
 from fsgen.evaluation.paired import paired_test  # noqa: E402
 from fsgen.evaluation.recovery import net_asset_decomposition, recovery_metrics  # noqa: E402
@@ -198,6 +199,8 @@ def main() -> None:
         "--versions", default=",".join(VERSIONS), help="比べる版(--dir 直下のディレクトリ名)"
     )
     ap.add_argument("--base", default="equal", help="ペア比較の基準にする版")
+    ap.add_argument("--exclude", type=Path, default=None,
+                    help="分類器の学習から除く書類の CSV(列 docID、ステージ28)")
     args = ap.parse_args()
     versions = tuple(args.versions.split(","))
     args.out.mkdir(parents=True, exist_ok=True)
@@ -205,7 +208,7 @@ def main() -> None:
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
     names = state_vector_names(spec, include_subtotals=False)
     members = subtotal_members(spec, names)
-    x_all, is2 = load_real(names)
+    x_all, is2 = load_real(names, load_excluded_docs(args.exclude))
     clfs = train_classifiers(x_all, is2, seed=42)
 
     rows, decs = [], []
@@ -216,7 +219,9 @@ def main() -> None:
     long = pd.concat(rows, ignore_index=True)
     long.to_csv(args.out / "rows.csv", index=False)
     comp = company_level(long)
-    for tag, excl in (("all68", ()), ("excl_outliers66", OUTLIERS)):
+    n_firms = comp["docID"].nunique()
+    n_out = len(set(OUTLIERS) & set(comp["docID"]))
+    for tag, excl in ((f"all{n_firms}", ()), (f"excl_outliers{n_firms - n_out}", OUTLIERS)):
         summary, paired = summarize(comp, excl, versions, args.base)
         summary.to_csv(args.out / f"summary_{tag}.csv", index=False)
         paired.to_csv(args.out / f"paired_{tag}.csv", index=False)

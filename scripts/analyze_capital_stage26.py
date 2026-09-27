@@ -88,7 +88,7 @@ def main() -> None:
     # 仕組み: 対応先と始点の払込資本比率の差
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
     names = state_vector_names(spec, include_subtotals=False)
-    x, _assets, _label, doc, _filer, _edinet = load_data(names)
+    x, _assets, _label, doc, _filer, _edinet, _keep = load_data(names)
     paid = pd.Series(x[:, names.index(_CS)] + x[:, names.index(_CSUR)], index=doc)
     lines += [
         "",

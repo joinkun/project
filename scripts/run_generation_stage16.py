@@ -51,6 +51,11 @@ from fsgen.accounting.projection_qp import (  # noqa: E402
     project_onto_feasible,
 )
 from fsgen.accounting.subspace import build_reduced_basis  # noqa: E402
+from fsgen.datasets.exclusion import (  # noqa: E402
+    exclusion_masks,
+    load_excluded_docs,
+    subset_folds,
+)
 from fsgen.errors import InfeasibleProjectionError  # noqa: E402
 from fsgen.models.cost import (  # noqa: E402
     combined_projection_weights,
@@ -107,17 +112,24 @@ def make_configs(
 
 def load_dataset(
     names: tuple[str, ...],
-) -> tuple[list[str], list[str], np.ndarray, np.ndarray, list[int]]:
+    excluded: frozenset[str] = frozenset(),
+) -> tuple[list[str], list[str], np.ndarray, np.ndarray, list[int], np.ndarray]:
+    """最後の要素は、除外前の class 2 の並びで残す始点(ステージ28 の除外、fold の絞り込み用)。"""
     agg = pd.read_csv(_AGGREGATED_CSV, dtype={"docID": str})
     agg = agg[(agg["parse_status"] == "ok") & (agg["is_financial"].astype(str) != "True")]
     lab = pd.read_csv(_LABELS_CSV, dtype={"docID": str})
     lab = lab[pd.to_numeric(lab["label"], errors="coerce").notna()]
     m = agg.merge(lab[["docID", "filerName", "label"]], on="docID", how="inner")
     m = m[m["total_assets"].notna() & (m["total_assets"] != 0)]
+    row_keep, src_keep = exclusion_masks(
+        m["docID"].tolist(), m["label"].astype(int).tolist(), excluded
+    )
+    m = m[row_keep]
     x = m[list(names)].fillna(0.0).to_numpy(dtype=float)
     assets = m["total_assets"].to_numpy(dtype=float)
     return (
         m["docID"].tolist(), m["filerName"].tolist(), x, assets, m["label"].astype(int).tolist(),
+        src_keep,
     )
 
 
@@ -132,6 +144,8 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--epochs", type=int, default=_EPOCHS)
     ap.add_argument("--n-folds", type=int, default=_N_FOLDS)
     ap.add_argument("--out-dir", type=Path, default=Path("data/interim/stage16"))
+    ap.add_argument("--exclude", type=Path, default=None,
+                    help="除外する書類の CSV(列 docID、ステージ28)")
     ap.add_argument("--layers-from", type=Path, default=None,
                     help="constraint_layersを読むcore.yaml(省略時は全層有効)")
     ap.add_argument("--re-cap", type=float, default=None,
@@ -158,14 +172,16 @@ def main() -> None:  # noqa: PLR0915
     if args.configs:
         configs = {k: configs[k] for k in args.configs.split(",")}
 
-    doc_ids, filer_names, x, assets, labels = load_dataset(names)
+    doc_ids, filer_names, x, assets, labels, src_keep = load_dataset(
+        names, load_excluded_docs(args.exclude)
+    )
     x_tilde = x / assets[:, None]
     idx0 = [i for i, lab in enumerate(labels) if lab == 0]
     idx2 = [i for i, lab in enumerate(labels) if lab == 2]
     x0_tilde, x2_tilde = x_tilde[idx0], x_tilde[idx2]
     doc2 = [doc_ids[i] for i in idx2]
     name2 = [filer_names[i] for i in idx2]
-    folds = np.load(_FOLDS)
+    folds = subset_folds(np.load(_FOLDS), src_keep)  # 除外なしなら元の分割のまま
     plans = np.load(args.plans)
     tag = f"{args.tag}__seed{args.seed}"
     print(f"[{tag}] configs={len(configs)} frozen={frozen}", flush=True)

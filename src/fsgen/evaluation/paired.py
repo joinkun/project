@@ -71,4 +71,46 @@ def unaggregated_p_value(df: pd.DataFrame, value_col: str, method_a: str, method
     return float(wilcoxon(diff).pvalue)
 
 
-__all__ = ["PairedResult", "aggregate_by_company", "paired_test", "unaggregated_p_value"]
+# Romano et al. (2006) の目安: |δ| < 0.147 無視できる、< 0.33 小、< 0.474 中、それ以上 大
+CLIFF_THRESHOLDS = ((0.147, "無視できる"), (0.33, "小"), (0.474, "中"))
+
+
+def cliffs_delta(a: np.ndarray, b: np.ndarray) -> float:
+    """Cliff's delta(a と b を独立な 2 標本とみなす): P(a > b) − P(a < b)。"""
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    a, b = a[np.isfinite(a)], b[np.isfinite(b)]
+    if len(a) == 0 or len(b) == 0:
+        return float("nan")
+    gt = (a[:, None] > b[None, :]).sum()
+    lt = (a[:, None] < b[None, :]).sum()
+    return float((gt - lt) / (len(a) * len(b)))
+
+
+def paired_dominance(a: np.ndarray, b: np.ndarray) -> float:
+    """対応のある差の優越: P(a_i > b_i) − P(a_i < b_i)(同じ企業どうしを比べる)。"""
+    diff = np.asarray(a, dtype=float) - np.asarray(b, dtype=float)
+    diff = diff[np.isfinite(diff)]
+    if len(diff) == 0:
+        return float("nan")
+    return float((np.sum(diff > 0) - np.sum(diff < 0)) / len(diff))
+
+
+def cliff_magnitude(delta: float) -> str:
+    """Cliff's delta の大きさの目安(Romano et al. 2006)。"""
+    for thr, label in CLIFF_THRESHOLDS:
+        if abs(delta) < thr:
+            return label
+    return "大"
+
+
+__all__ = [
+    "CLIFF_THRESHOLDS",
+    "PairedResult",
+    "aggregate_by_company",
+    "cliff_magnitude",
+    "cliffs_delta",
+    "paired_dominance",
+    "paired_test",
+    "unaggregated_p_value",
+]

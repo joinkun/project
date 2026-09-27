@@ -60,13 +60,17 @@ METRICS = (
 )
 
 
-def load_real(names: tuple[str, ...]) -> tuple[np.ndarray, np.ndarray]:
+def load_real(
+    names: tuple[str, ...], excluded: frozenset[str] = frozenset()
+) -> tuple[np.ndarray, np.ndarray]:
+    """分類器の学習データ。``excluded`` の書類を除く(ステージ28)。"""
     agg = pd.read_csv("data/interim/values/aggregated_core.csv", dtype={"docID": str})
     agg = agg[(agg["parse_status"] == "ok") & (agg["is_financial"].astype(str) != "True")]
     lab = pd.read_csv("data/interim/labels/labels.csv", dtype={"docID": str})
     lab = lab[pd.to_numeric(lab["label"], errors="coerce").notna()]
     m = agg.merge(lab[["docID", "label"]], on="docID", how="inner")
     m = m[m["total_assets"].notna() & (m["total_assets"] != 0)]
+    m = m[~m["docID"].isin(excluded)]
     x = m[list(names)].fillna(0.0).to_numpy(dtype=float)
     x = x / m["total_assets"].to_numpy(dtype=float)[:, None]
     return x, m["label"].astype(int).to_numpy() == 2
