@@ -21,6 +21,15 @@ basis:
   - jppfs_cor_RawMaterialsAndSupplies
   - jppfs_cor_RawMaterials
   - jppfs_cor_Supplies
+  # ステージ21-C で追加(scripts/integration_plan_stage21.py)
+  - jppfs_cor_CostsOnUncompletedConstructionContractsCNS
+  - jppfs_cor_CostsOnUncompletedConstructionContractsAndOtherCNS
+  - jppfs_cor_RawMaterialsAndSuppliesCNS
+  - jppfs_cor_RealEstateForSaleCNS
+  - jppfs_cor_RealEstateForSale
+  - jppfs_cor_RealEstateForSaleInProcess
+  - jppfs_cor_OtherInventories
+  - jppfs_cor_SemiFinishedGoods
   parent_subtotal: jppfs_cor_CurrentAssets
   side: assets
   sign: nonneg
@@ -34,6 +43,20 @@ basis:
   - jppfs_cor_NotesAndAccountsReceivableTrade
   - jppfs_cor_NotesAndAccountsReceivableTradeAndContractAssets
   - jppfs_cor_NotesReceivableTrade
+  # ステージ21-C で追加(scripts/integration_plan_stage21.py)
+  - jppfs_cor_ElectronicallyRecordedMonetaryClaimsOperatingCA
+  - jppfs_cor_ContractAssets
+  - jppfs_cor_AccountsReceivableTradeAndContractAssets
+  - jppfs_cor_AccountsReceivableTradeNet
+  - jppfs_cor_OperatingAccountsReceivableCA
+  - jppfs_cor_NotesAndOperatingAccountsReceivableCA
+  - jppfs_cor_AccountsReceivableInstallment
+  - jppfs_cor_AccountsReceivableInstallmentSalesCALEA
+  - jppfs_cor_AccountsReceivableLeaseCALEA
+  - jppfs_cor_AccountsReceivableCARWY
+  - jppfs_cor_OperatingAccountsReceivableOfHighwayBusinessCAHWY
+  - jppfs_cor_NotesReceivableAccountsReceivableFromCompletedConstructionContractsAndOtherCNS
+  - jppfs_cor_AccountsReceivableFromCompletedConstructionContractsCNS
   parent_subtotal: jppfs_cor_CurrentAssets
   side: assets
   sign: nonneg
@@ -142,6 +165,11 @@ basis:
   members:
   - jppfs_cor_ShortTermLoansPayable
   - jppfs_cor_CurrentPortionOfLongTermLoansPayable
+  # ステージ21-C で追加(scripts/integration_plan_stage21.py)
+  - jppfs_cor_CommercialPapersLiabilities
+  - jppfs_cor_ShortTermBondsPayable
+  - jppfs_cor_ShortTermLoansPayableToSubsidiariesAndAffiliates
+  - jppfs_cor_CurrentPortionOfLongTermLoansPayableToSubsidiariesAndAffiliates
   parent_subtotal: jppfs_cor_CurrentLiabilities
   side: liabilities
   sign: nonneg
@@ -174,6 +202,16 @@ basis:
   - jppfs_cor_AccountsPayableTrade
   - jppfs_cor_NotesAndAccountsPayableTrade
   - jppfs_cor_NotesPayableTrade
+  # ステージ21-C で追加(scripts/integration_plan_stage21.py)
+  - jppfs_cor_ElectronicallyRecordedObligationsOperatingCL
+  - jppfs_cor_OperatingAccountsPayable
+  - jppfs_cor_NotesAndOperatingAccountsPayableTrade
+  - jppfs_cor_AccountsPayableOperatingSpecific
+  - jppfs_cor_AccountsPayableConsignment
+  - jppfs_cor_OperatingAccountsPayableHighwayBusinessCLHWY
+  - jppfs_cor_NotesPayableAccountsPayableForConstructionContractsAndOtherCNS
+  - jppfs_cor_NotesPayableAccountsPayableForConstructionContractsCNS
+  - jppfs_cor_AccountsPayableForConstructionContractsCNS
   parent_subtotal: jppfs_cor_CurrentLiabilities
   side: liabilities
   sign: nonneg
@@ -184,6 +222,12 @@ basis:
 - name: accounts_payable_other
   members:
   - jppfs_cor_AccountsPayableOther
+  # ステージ21-C で追加(scripts/integration_plan_stage21.py)
+  - jppfs_cor_ElectronicallyRecordedObligationsFacilitiesCL
+  - jppfs_cor_ElectronicallyRecordedObligationsNonOperatingCL
+  - jppfs_cor_NotesPayableFacilities
+  - jppfs_cor_AccountsPayableFacilities
+  - jppfs_cor_AccountsPayableOtherAndAccruedExpenses
   parent_subtotal: jppfs_cor_CurrentLiabilities
   side: liabilities
   sign: nonneg
@@ -222,6 +266,9 @@ basis:
 - name: long_term_loans
   members:
   - jppfs_cor_LongTermLoansPayable
+  # ステージ21-C で追加(scripts/integration_plan_stage21.py)
+  - jppfs_cor_LongTermLoansPayableToSubsidiariesAndAffiliates
+  - jppfs_cor_LongTermLoansPayableToRoadBuildingNCLHWY
   parent_subtotal: jppfs_cor_NoncurrentLiabilities
   side: liabilities
   sign: nonneg
@@ -232,6 +279,8 @@ basis:
 - name: bonds_noncurrent
   members:
   - jppfs_cor_BondsPayable
+  # ステージ21-C で追加(scripts/integration_plan_stage21.py)
+  - jppfs_cor_RoadBuildingBondsPayableNCLHWY
   parent_subtotal: jppfs_cor_NoncurrentLiabilities
   side: liabilities
   sign: nonneg
