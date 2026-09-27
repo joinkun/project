@@ -56,7 +56,12 @@ from fsgen.models.cost import (  # noqa: E402
     load_cost_config,
     weighted_asymmetric_cost_matrix,
 )
-from fsgen.models.flow_matching import VelocityField, euler_sample_batch, train_fm  # noqa: E402
+from fsgen.models.flow_matching import (  # noqa: E402
+    VelocityField,
+    euler_sample_batch,
+    seeded_velocity_field,
+    train_fm,
+)
 from fsgen.models.transport import solve_ot_from_cost  # noqa: E402
 
 _DEFAULT_CANONICAL = Path("conf/accounts/core.yaml")
@@ -235,7 +240,12 @@ def main() -> None:  # noqa: PLR0915
             )
             plan_test = solve_ot_from_cost(cost_test, _EPSILON)
 
-            net_fm = VelocityField(dim=_K, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+            net_fm = seeded_velocity_field(
+                seed * 1000 + fold_i,
+                dim=_K,
+                hidden=_HIDDEN,
+                n_layers=_N_LAYERS,
+            )
             train_fm(
                 z_train, z0, plan_train, net_fm, epochs=_EPOCHS, lr=_LR, seed=seed,
                 z_val=z_test, plan_val=plan_test,

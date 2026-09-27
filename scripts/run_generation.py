@@ -54,7 +54,13 @@ from fsgen.evaluation.baselines import (
 )
 from fsgen.models.cost import combined_projection_weights, load_cost_config
 from fsgen.models.differentiable_projection import build_projection_layer
-from fsgen.models.flow_matching import VelocityField, euler_sample_batch, train_cafm, train_fm
+from fsgen.models.flow_matching import (
+    VelocityField,
+    euler_sample_batch,
+    seeded_velocity_field,
+    train_cafm,
+    train_fm,
+)
 
 _DEFAULT_CANONICAL = Path("conf/accounts/core.yaml")
 _DEFAULT_COSTS = Path("conf/accounts/costs.yaml")
@@ -184,7 +190,12 @@ def main() -> None:  # noqa: PLR0915
             z_train = x2_tilde[train_pos] @ b
             z_test = x2_tilde[test_pos] @ b
 
-            net_fm = VelocityField(dim=_K, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+            net_fm = seeded_velocity_field(
+                seed * 1000 + fold_i,
+                dim=_K,
+                hidden=_HIDDEN,
+                n_layers=_N_LAYERS,
+            )
             train_fm(
                 z_train, z0, plan_train, net_fm, epochs=_EPOCHS, lr=_LR, seed=seed,
                 z_val=z_test, plan_val=plan_test,
@@ -200,7 +211,12 @@ def main() -> None:  # noqa: PLR0915
                 layers_train.append(
                     build_projection_layer(spec, x_start_p, weights_p, dcs, non_actionable)
                 )
-            net_cafm = VelocityField(dim=_K, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+            net_cafm = seeded_velocity_field(
+                seed * 1000 + fold_i,
+                dim=_K,
+                hidden=_HIDDEN,
+                n_layers=_N_LAYERS,
+            )
             x_start_train = x2_tilde[train_pos]
             result_cafm = train_cafm(
                 z_train, z0, plan_train, net_cafm, layers_train, x_start_train, b,

@@ -34,7 +34,12 @@ from fsgen.accounting.projection_qp import (
 )
 from fsgen.accounting.subspace import build_reduced_basis
 from fsgen.models.cost import combined_projection_weights, cost_vectors, load_cost_config
-from fsgen.models.flow_matching import VelocityField, euler_sample_batch, train_fm
+from fsgen.models.flow_matching import (
+    VelocityField,
+    euler_sample_batch,
+    seeded_velocity_field,
+    train_fm,
+)
 
 _CANONICAL = Path("conf/accounts/core.yaml")
 _COSTS = Path("conf/accounts/costs.yaml")
@@ -131,7 +136,12 @@ def main() -> None:
                 z0 = x0_tilde @ b
                 z_train = x2_tilde[train_pos] @ b
                 z_test = x2_tilde[test_pos] @ b
-                net = VelocityField(dim=_K, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+                net = seeded_velocity_field(
+                    seed * 1000 + k,
+                    dim=_K,
+                    hidden=_HIDDEN,
+                    n_layers=_N_LAYERS,
+                )
                 train_fm(
                     z_train, z0, plans[f"plan_train_{k}"], net, epochs=_EPOCHS, lr=_LR,
                     seed=seed, z_val=z_test, plan_val=plans[f"plan_test_{k}"],

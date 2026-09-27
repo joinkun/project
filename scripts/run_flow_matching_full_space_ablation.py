@@ -35,7 +35,11 @@ from fsgen.models.cost import (  # noqa: E402
     load_cost_config,
     weighted_asymmetric_cost_matrix,
 )
-from fsgen.models.flow_matching import VelocityField, euler_sample_batch, train_fm  # noqa: E402
+from fsgen.models.flow_matching import (  # noqa: E402
+    euler_sample_batch,
+    seeded_velocity_field,
+    train_fm,
+)
 from fsgen.models.transport import solve_ot_from_cost  # noqa: E402
 
 _K = 13
@@ -116,7 +120,7 @@ def main() -> None:
     z0 = x0_tilde @ b
     z_train = x2_tilde[train_pos] @ b
     z_test = x2_tilde[test_pos] @ b
-    net_low = VelocityField(dim=_K, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+    net_low = seeded_velocity_field(_SEED * 1000, dim=_K, hidden=_HIDDEN, n_layers=_N_LAYERS)
     result_low = train_fm(
         z_train, z0, plan_train, net_low, epochs=_EPOCHS, lr=_LR, seed=_SEED,
         z_val=z_test, plan_val=plan_test,
@@ -129,7 +133,12 @@ def main() -> None:
     x_path_low_tilde = x2_tilde[test_pos][:, None, :] + np.einsum("dk,ntk->ntd", b, disp)
 
     # --- 元空間版(x̃, 30次元、Bを経由しない) ---
-    net_full = VelocityField(dim=len(names), hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+    net_full = seeded_velocity_field(
+        _SEED * 1000,
+        dim=len(names),
+        hidden=_HIDDEN,
+        n_layers=_N_LAYERS,
+    )
     result_full = train_fm(
         x2_tilde[train_pos], x0_tilde, plan_train, net_full, epochs=_EPOCHS, lr=_LR, seed=_SEED,
         z_val=x2_tilde[test_pos], plan_val=plan_test,

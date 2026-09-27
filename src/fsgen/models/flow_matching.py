@@ -81,6 +81,19 @@ def _resample_pairs(
     return np.array([sample_ot_targets(plan[k], rng) for k in range(plan.shape[0])])
 
 
+
+def seeded_velocity_field(
+    seed: int, dim: int, hidden: int = _DEFAULT_HIDDEN, n_layers: int = _DEFAULT_LAYERS
+) -> VelocityField:
+    """乱数の種を設定してから速度場を作る(float64)。
+
+    ステージ26 で判明: 以前は各スクリプトが ``VelocityField(...)`` を作った**後で**
+    ``train_fm`` の中で初めて ``torch.manual_seed`` を呼んでいたため、最初の fold の
+    初期値だけが実行ごとに変わっていた(エラーは出ない)。初期化は必ずこの関数を通す。
+    """
+    torch.manual_seed(seed)
+    return VelocityField(dim=dim, hidden=hidden, n_layers=n_layers).double()
+
 def train_fm(
     z_train: np.ndarray,
     z_pool: np.ndarray,

@@ -58,6 +58,7 @@ from fsgen.models.differentiable_projection import (  # noqa: E402
 from fsgen.models.flow_matching import (  # noqa: E402
     VelocityField,
     euler_sample_batch,
+    seeded_velocity_field,
     train_cafm,
     train_fm,
 )
@@ -137,6 +138,7 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--allow-dropped-sources", type=int, default=0,
                     help="1=不均衡OTで質量0になった始点を許し、FM学習から除外する(件数を表示)")
     ap.add_argument("--epochs", type=int, default=_EPOCHS)
+    ap.add_argument("--out-dir", type=Path, default=_OUT_DIR, help="出力先(ステージ27)")
     ap.add_argument("--n-folds", type=int, default=_N_FOLDS, help="スモークテスト用(既定=全5fold)")
     args = ap.parse_args()
     torch.set_num_threads(1)
@@ -208,7 +210,12 @@ def main() -> None:  # noqa: PLR0915
         plan_train = plan_train[alive_train]
         train_pos_fit = train_pos[alive_train]  # 学習に使う始点(質量0の始点を除く)
 
-        net_fm = VelocityField(dim=_K, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+        net_fm = seeded_velocity_field(
+            args.seed * 1000 + k,
+            dim=_K,
+            hidden=_HIDDEN,
+            n_layers=_N_LAYERS,
+        )
         train_fm(
             z_train, z0, plan_train, net_fm, epochs=args.epochs, lr=_LR, seed=args.seed,
             z_val=z_test, plan_val=plan_test,
@@ -224,7 +231,12 @@ def main() -> None:  # noqa: PLR0915
                 err = check_layer_gradient(layers[li], x2_tilde[train_pos_fit[li]], rng_check)
                 print(f"    勾配チェック(fold{k}, 社{li}): 相対誤差中央値={err:.2e}", flush=True)
             if "CAFM_scratch" in methods:
-                net_s = VelocityField(dim=_K, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+                net_s = seeded_velocity_field(
+                    args.seed * 1000 + k,
+                    dim=_K,
+                    hidden=_HIDDEN,
+                    n_layers=_N_LAYERS,
+                )
                 res_s = train_cafm(
                     z_train, z0, plan_train, net_s, layers, x2_tilde[train_pos_fit], b,
                     epochs=args.epochs, lr=_LR, seed=args.seed, z_val=z_test, plan_val=plan_test,
@@ -232,7 +244,12 @@ def main() -> None:  # noqa: PLR0915
                 paths["CAFM_scratch"] = sample_and_convert(net_s, x2_tilde, test_pos, b)
                 print(f"    CAFM_scratch 射影失敗={res_s.solver_failures}", flush=True)
             if "CAFM_warm" in methods:
-                net_w = VelocityField(dim=_K, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+                net_w = seeded_velocity_field(
+                    args.seed * 1000 + k,
+                    dim=_K,
+                    hidden=_HIDDEN,
+                    n_layers=_N_LAYERS,
+                )
                 net_w.load_state_dict(net_fm.state_dict())
                 res_w = train_cafm(
                     z_train, z0, plan_train, net_w, layers, x2_tilde[train_pos_fit], b,
@@ -254,8 +271,8 @@ def main() -> None:  # noqa: PLR0915
         elapsed = time.perf_counter() - t0
         print(f"  [{tag}] fold {k + 1}/{args.n_folds} 完了({elapsed:.0f}s)", flush=True)
 
-    _OUT_DIR.mkdir(parents=True, exist_ok=True)
-    out = _OUT_DIR / (f"{tag}.parquet" if args.n_folds == _N_FOLDS else f"SMOKE_{tag}.parquet")
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    out = args.out_dir / (f"{tag}.parquet" if args.n_folds == _N_FOLDS else f"SMOKE_{tag}.parquet")
     pd.DataFrame(rows).to_parquet(out, index=False)
     print(f"[{tag}] {len(rows)}行を書き出しました: {out}", flush=True)
 

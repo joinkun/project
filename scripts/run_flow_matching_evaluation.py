@@ -58,6 +58,7 @@ from fsgen.models.flow_matching import (  # noqa: E402
     TrainResult,
     VelocityField,
     euler_sample_batch,
+    seeded_velocity_field,
     train_cafm,
     train_fm,
 )
@@ -347,7 +348,12 @@ def main() -> None:  # noqa: PLR0915
             plan_test = solve_ot_from_cost(cost_test, _EPSILON)
 
             # --- FM ---
-            net_fm = VelocityField(dim=_K, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+            net_fm = seeded_velocity_field(
+                seed * 1000 + fold_i,
+                dim=_K,
+                hidden=_HIDDEN,
+                n_layers=_N_LAYERS,
+            )
             t0 = time.perf_counter()
             result_fm = train_fm(
                 z_train, z0, plan_train, net_fm, epochs=args.epochs, lr=_LR, seed=seed,
@@ -365,7 +371,12 @@ def main() -> None:  # noqa: PLR0915
 
             # --- CAFM (scratch / warm start) ---
             layers_train = build_fold_projection_layers(ds, x2_tilde, train_pos)
-            net_cafm_scratch = VelocityField(dim=_K, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+            net_cafm_scratch = seeded_velocity_field(
+                seed * 1000 + fold_i,
+                dim=_K,
+                hidden=_HIDDEN,
+                n_layers=_N_LAYERS,
+            )
             t0 = time.perf_counter()
             x_start_train = x2_tilde[train_pos]
             result_cafm_scratch = train_cafm(
@@ -375,7 +386,12 @@ def main() -> None:  # noqa: PLR0915
             )
             cafm_scratch_time = time.perf_counter() - t0
 
-            net_cafm_warm = VelocityField(dim=_K, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+            net_cafm_warm = seeded_velocity_field(
+                seed * 1000 + fold_i,
+                dim=_K,
+                hidden=_HIDDEN,
+                n_layers=_N_LAYERS,
+            )
             net_cafm_warm.load_state_dict(net_fm.state_dict())
             t0 = time.perf_counter()
             result_cafm_warm = train_cafm(

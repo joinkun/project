@@ -26,6 +26,7 @@ import os
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 import argparse  # noqa: E402
+import dataclasses  # noqa: E402
 import time  # noqa: E402
 from pathlib import Path  # noqa: E402
 
@@ -56,7 +57,11 @@ from fsgen.models.cost import (  # noqa: E402
     cost_vectors,
     load_cost_config,
 )
-from fsgen.models.flow_matching import VelocityField, euler_sample_batch, train_fm  # noqa: E402
+from fsgen.models.flow_matching import (  # noqa: E402
+    euler_sample_batch,
+    seeded_velocity_field,
+    train_fm,
+)
 from fsgen.models.transport import check_plan_health  # noqa: E402
 
 _CANONICAL = Path("conf/accounts/core.yaml")
@@ -76,6 +81,7 @@ _DELTA = 1e-3
 
 def make_configs(
     layers: ConstraintLayers | None = None,
+    re_cap: float | None = None,
 ) -> dict[str, tuple[str, PlausibilityConfig]]:
     """設定名 -> (重み条件, 追加制約)。layers.layer2=False なら全設定が第1層のみ(=S0)になる。"""
     layers = layers or ConstraintLayers()
@@ -91,6 +97,11 @@ def make_configs(
                     contra_net_nonneg=True, label=name,
                 )
                 out[name] = (cond, apply_layers(cfg, layers))
+    if re_cap is not None:  # ステージ27: 利益剰余金の増加の上限(R3 と併用)
+        base = out["W1_S5_a05_b03"][1]
+        name = f"W1_S5_a05_b03_re{re_cap:g}"
+        capped = dataclasses.replace(base, re_growth_cap=re_cap, label=name)
+        out[name] = ("W1", apply_layers(capped, layers))
     return out
 
 
@@ -123,6 +134,8 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--out-dir", type=Path, default=Path("data/interim/stage16"))
     ap.add_argument("--layers-from", type=Path, default=None,
                     help="constraint_layersを読むcore.yaml(省略時は全層有効)")
+    ap.add_argument("--re-cap", type=float, default=None,
+                    help="利益剰余金の増加の上限 γ(総資産比、ステージ27)")
     ap.add_argument("--k", type=int, default=_K,
                     help="低次元基底の次元(既定13。ステージ17 F: 感度確認用に14を1回試す)")
     args = ap.parse_args()
@@ -141,7 +154,7 @@ def main() -> None:  # noqa: PLR0915
     w1 = (np.ones(dim), np.ones(dim))
     w3 = cost_vectors(cost_config, names, non_actionable_mode="keep")
     weights_by_cond = {"W1": w1, "W3": w3}
-    configs = make_configs(layers)
+    configs = make_configs(layers, args.re_cap)
     if args.configs:
         configs = {k: configs[k] for k in args.configs.split(",")}
 
@@ -182,11 +195,14 @@ def main() -> None:  # noqa: PLR0915
         b = build_reduced_basis(c, x_tilde[pool_idx], k=args.k)
         z0 = x0_tilde @ b
         z_train, z_test = x2_tilde[train_pos] @ b, x2_tilde[test_pos] @ b
-        # ステージ26: 初期値の乱数を固定してからネットワークを作る。以前は train_fm の中で
-        # 初めて種を設定していたため、fold 0 の初期値だけが実行ごとに変わっていた
-        # (fold 1〜4 は前の fold の学習後の乱数状態を引き継ぐため再現されていた)。
-        torch.manual_seed(args.seed * 1000 + k)
-        net = VelocityField(dim=args.k, hidden=_HIDDEN, n_layers=_N_LAYERS).double()
+        # ステージ26: 種を設定してからネットワークを作る(seeded_velocity_field)。以前は
+        # train_fm の中で初めて種を設定していたため、fold 0 の初期値だけが実行ごとに変わっていた。
+        net = seeded_velocity_field(
+            args.seed * 1000 + k,
+            dim=args.k,
+            hidden=_HIDDEN,
+            n_layers=_N_LAYERS,
+        )
         train_fm(z_train, z0, plan_train, net, epochs=args.epochs, lr=_LR, seed=args.seed,
                  z_val=z_test, plan_val=plan_test)
         z_start = x2_tilde[test_pos] @ b
