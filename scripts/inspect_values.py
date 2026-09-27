@@ -50,6 +50,7 @@ from lxml import etree
 from tqdm import tqdm
 
 from fsgen.parsing.calculation_link import CalcTree, parse_calculation_link_bytes, select_tree
+from fsgen.parsing.extension import ExtensionRule
 from fsgen.parsing.instance import (
     Period,
     context_id_for_role,
@@ -116,6 +117,8 @@ class CanonicalConfig:
     basis: tuple[BasisAccount, ...]
     subtotals: tuple[SubtotalAccount, ...]
     totals: dict[str, str]
+    # ステージ21-D: 拡張要素を局所名の完全一致でグループへ写像するか
+    extension_local_name_mapping: bool = False
 
     @property
     def member_to_name(self) -> dict[str, str]:
@@ -135,6 +138,14 @@ class CanonicalConfig:
     def basis_names_for_parent(self, parent_subtotal: str) -> tuple[str, ...]:
         return tuple(b.name for b in self.basis if b.parent_subtotal == parent_subtotal)
 
+    @property
+    def extension_rule(self) -> ExtensionRule | None:
+        if not self.extension_local_name_mapping:
+            return None
+        return ExtensionRule.from_members(
+            self.member_to_name, {b.name: b.parent_subtotal for b in self.basis}
+        )
+
 
 def load_canonical(path: Path) -> CanonicalConfig:
     with path.open(encoding="utf-8") as f:
@@ -152,7 +163,13 @@ def load_canonical(path: Path) -> CanonicalConfig:
         for b in doc["basis"]
     )
     subtotals = tuple(SubtotalAccount(**s) for s in doc["subtotals"])
-    return CanonicalConfig(name=doc["name"], basis=basis, subtotals=subtotals, totals=doc["totals"])
+    return CanonicalConfig(
+        name=doc["name"],
+        basis=basis,
+        subtotals=subtotals,
+        totals=doc["totals"],
+        extension_local_name_mapping=bool(doc.get("extension_local_name_mapping", False)),
+    )
 
 
 def _load_document_index(document_list_csv: Path) -> dict[str, dict[str, str]]:
@@ -165,6 +182,7 @@ def find_bucket(
     tree: CalcTree,
     member_to_name: dict[str, str],
     subtotal_ids: frozenset[str],
+    extension: ExtensionRule | None = None,
 ) -> str | None:
     """leaf 自身、またはその祖先が最初に基礎科目のメンバーか小計に当たった
     ところで停止し、対応する集計先(基礎科目名、または __OTHER__<小計>)を
@@ -175,9 +193,16 @@ def find_bucket(
     いれば、そこへ丸める(§2.1「粗い方を取る」原則)。ここで __OTHER__ に
     積み上げられる値は、小計ファクトが欠損している場合のフォールバック
     としてのみ最終的に使われる(§A)。
+
+    ``extension`` を渡すと、会社独自の拡張要素を局所名の完全一致でグループへ写像する
+    (cal 上で最も近い小計がグループの親小計と一致する場合のみ。ステージ21-D)。
     """
     u = leaf
     while u not in member_to_name and u not in subtotal_ids:
+        if extension is not None:
+            group = extension.resolve(u, tree, subtotal_ids)
+            if group is not None:
+                return group
         parents = tree.parents_of(u)
         if not parents:
             return None
@@ -271,6 +296,7 @@ def _process_company_inner(
 
     member_to_name = canonical.member_to_name
     subtotal_ids = canonical.subtotal_ids
+    extension = canonical.extension_rule
     values: dict[str, int] = defaultdict(int)
     has_value: dict[str, bool] = defaultdict(bool)
     has_leaf: dict[str, bool] = defaultdict(bool)
@@ -278,7 +304,7 @@ def _process_company_inner(
     # 1. 基礎科目(と、フォールバック用の積み上げ __OTHER__)を葉から計算する。
     for leaf in tree.leaves():
         fact = read_fact(root, leaf, context_id)
-        bucket = find_bucket(leaf, tree, member_to_name, subtotal_ids)
+        bucket = find_bucket(leaf, tree, member_to_name, subtotal_ids, extension)
         if bucket is None:
             # 全ての葉は Assets/Liabilities/NetAssets のいずれかに到達できる
             # はずなので、ここには通常到達しない。防御的に読み捨てる。

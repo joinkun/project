@@ -1,5 +1,8 @@
 name: core
 min_ratio: 0.9
+# ステージ21-D: 会社独自の拡張要素を、局所名が members と完全一致し、cal 上で最も近い小計が
+# グループの親小計と一致する場合に同じグループへ写像する(src/fsgen/parsing/extension.py)。
+extension_local_name_mapping: true
 generated_from: data/interim/survey/element_frequency.csv
 basis:
 - name: __OTHER__jppfs_cor_Assets
@@ -33,7 +36,7 @@ basis:
   parent_subtotal: jppfs_cor_CurrentAssets
   side: assets
   sign: nonneg
-  sign_reason: 実測3503社(正のみ)中、負が0社。
+  sign_reason: 実測3706社(正のみ)中、負が0社。
   ratio: 1.0
   always_include: false
   include_reason: null
@@ -60,7 +63,7 @@ basis:
   parent_subtotal: jppfs_cor_CurrentAssets
   side: assets
   sign: nonneg
-  sign_reason: 実測3532社(正のみ)中、負が0社。
+  sign_reason: 実測3837社(正のみ)中、負が0社。
   ratio: 1.0
   always_include: false
   include_reason: null
@@ -95,7 +98,7 @@ basis:
   parent_subtotal: jppfs_cor_CurrentAssets
   side: assets
   sign: nonpos
-  sign_reason: 実測3,115社(値あり)中、正が0社(ステージ16 A.2)。
+  sign_reason: 実測3022社(負のみ)中、正が0社。
   ratio: 0.7702
   always_include: true
   include_reason: "控除科目。売上債権を持つ企業に通常存在し、残余科目が負になる主因(ステージ15: 611社中607社)"
@@ -114,7 +117,7 @@ basis:
   parent_subtotal: jppfs_cor_NoncurrentAssets
   side: assets
   sign: nonneg
-  sign_reason: 実測4102社中3社のみ負(いずれも-1,000円ちょうど)。物理的な資産が負になることは会計上ありえず、端数処理由来の外れ値と判断しnonnegとする。
+  sign_reason: 実測4068社中3社のみ負(いずれも-1,000円ちょうど)。物理的な資産が負になることは会計上ありえず、端数処理由来の外れ値と判断しnonnegとする。
   ratio: 0.9895
   always_include: false
   include_reason: null
@@ -148,7 +151,7 @@ basis:
   parent_subtotal: jppfs_cor_NoncurrentAssets
   side: assets
   sign: nonpos
-  sign_reason: 実測(値あり)中、正が0社(ステージ16 A.2)。
+  sign_reason: 実測2651社(負のみ)中、正が0社。
   ratio: 0.6768
   always_include: true
   include_reason: 控除科目(投資その他の資産の貸倒引当金等)。従来は投資その他の資産に純額で含まれていた
@@ -173,7 +176,7 @@ basis:
   parent_subtotal: jppfs_cor_CurrentLiabilities
   side: liabilities
   sign: nonneg
-  sign_reason: 実測3312社(正のみ)中、負が0社。
+  sign_reason: 実測3325社(正のみ)中、負が0社。
   ratio: 1.0
   always_include: true
   include_reason: null
@@ -215,7 +218,7 @@ basis:
   parent_subtotal: jppfs_cor_CurrentLiabilities
   side: liabilities
   sign: nonneg
-  sign_reason: 実測3497社(正のみ)中、負が0社。
+  sign_reason: 実測3765社(正のみ)中、負が0社。
   ratio: 0.8612
   always_include: true
   include_reason: 運転資本の主要項目。出現率は表記分裂の名残
@@ -231,7 +234,7 @@ basis:
   parent_subtotal: jppfs_cor_CurrentLiabilities
   side: liabilities
   sign: nonneg
-  sign_reason: 実測2443社(正のみ)中、負が0社。
+  sign_reason: 実測2535社(正のみ)中、負が0社。
   ratio: 0.5726
   always_include: true
   include_reason: 未払金。金額規模が大きい
@@ -272,7 +275,7 @@ basis:
   parent_subtotal: jppfs_cor_NoncurrentLiabilities
   side: liabilities
   sign: nonneg
-  sign_reason: 実測2962社(正のみ)中、負が0社。
+  sign_reason: 実測2970社(正のみ)中、負が0社。
   ratio: 0.7238
   always_include: true
   include_reason: null
@@ -284,7 +287,7 @@ basis:
   parent_subtotal: jppfs_cor_NoncurrentLiabilities
   side: liabilities
   sign: nonneg
-  sign_reason: 実測785社(正のみ)中、負が0社。
+  sign_reason: 実測790社(正のみ)中、負が0社。
   ratio: 0.2141
   always_include: true
   include_reason: null
@@ -303,7 +306,7 @@ basis:
   parent_subtotal: jppfs_cor_NetAssets
   side: net_assets
   sign: free
-  sign_reason: 実測1751社中14社が負。子会社の欠損累積により非支配株主持分相当額が負になるのは正当な会計事象であり、データ誤りではないためfreeとする。
+  sign_reason: 実測1733社中14社が負。子会社の欠損累積により非支配株主持分相当額が負になるのは正当な会計事象であり、データ誤りではないためfreeとする。
   ratio: 0.4555
   always_include: true
   include_reason: 連結BSの構造上必須

@@ -54,13 +54,16 @@ def main() -> None:
     parser.add_argument("--post-core", type=Path, default=Path("conf/accounts/core.yaml"))
     parser.add_argument("--pre", type=Path, default=Path("data/interim/stage21"))
     parser.add_argument("--post", type=Path, default=Path("data/interim/stage21/integrated"))
+    parser.add_argument("--pre-results", type=Path, default=Path("results/stage21"))
+    parser.add_argument("--post-results", type=Path, default=Path("results/stage21/integrated"))
+    parser.add_argument("--title", default="ステージ21-C B.3・B.4: canonical の統合前後の比較")
     parser.add_argument("--leaks", type=Path, default=Path("data/interim/stage21/leaks"))
     parser.add_argument(
         "--out", type=Path, default=Path("results/stage21/integration_verification.md")
     )
     args = parser.parse_args()
 
-    lines = ["# ステージ21-C B.3・B.4: canonical の統合前後の比較", ""]
+    lines = [f"# {args.title}", ""]
 
     # 1-2. D と rank(C)
     lines += ["## 次元と制約", ""]
@@ -77,8 +80,8 @@ def main() -> None:
     lines += ["", "## 恒等式残差(0 でない社数 / 評価社数)", ""]
     lines += ["| 提出期間 | 残差 | 期 | 統合前 | 統合後 |", "|---|---|---|---|---|"]
     for s in _SETS:
-        pre = pd.read_csv(Path("results/stage21") / s / "residuals.csv")
-        post = pd.read_csv(Path("results/stage21/integrated") / s / "residuals.csv")
+        pre = pd.read_csv(args.pre_results / s / "residuals.csv")
+        post = pd.read_csv(args.post_results / s / "residuals.csv")
         for (_, a), (_, b) in zip(pre.iterrows(), post.iterrows(), strict=True):
             lines.append(
                 f"| {s} | {a['residual']} | {a['period']} | {a['n_nonzero']} / {a['n_evaluated']} "
