@@ -19,14 +19,18 @@ from pathlib import Path  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from fsgen.accounting.constraints import load_canonical_spec, state_vector_names  # noqa: E402
+from fsgen.datasets.exclusion import load_excluded_docs  # noqa: E402
 from fsgen.evaluation.identification import identification_auc_repeated  # noqa: E402
 
 _REPEATS = 20
 _CONFIG = "W1_S5_a05_b03"
 
 
-def load_real(names: tuple[str, ...]) -> pd.DataFrame:
-    """ステージ16 の `load_real` と同じ実データ(総資産で割った値、class 2 以外)。"""
+def load_real(names: tuple[str, ...], excluded: frozenset[str] = frozenset()) -> pd.DataFrame:
+    """ステージ16 の `load_real` と同じ実データ(総資産で割った値、class 2 以外)。
+
+    ``excluded`` の書類を除く(ステージ28 の除外、ステージ31)。
+    """
     agg = pd.read_csv("data/interim/values/aggregated_core.csv", dtype={"docID": str})
     agg = agg[(agg["parse_status"] == "ok") & (agg["is_financial"].astype(str) != "True")]
     lab = pd.read_csv("data/interim/labels/labels.csv", dtype={"docID": str})
@@ -34,6 +38,7 @@ def load_real(names: tuple[str, ...]) -> pd.DataFrame:
     m = agg.merge(lab[["docID", "label"]], on="docID", how="inner")
     m = m[m["total_assets"].notna() & (m["total_assets"] != 0)]
     m = m[m["label"].astype(int) != 2]
+    m = m[~m["docID"].isin(excluded)]
     x = m[list(names)].fillna(0.0).div(m["total_assets"].to_numpy(dtype=float), axis=0)
     return x
 
@@ -45,10 +50,12 @@ def main() -> None:
         "--versions", default="r1,r2,r3,r3_cap,r1_median,r3_median,r3_median_cap,old_weights"
     )
     ap.add_argument("--out", type=Path, default=Path("results/stage27/metrics/auc.csv"))
+    ap.add_argument("--exclude", type=Path, default=None,
+                    help="除外する書類の CSV(列 docID、ステージ28)")
     args = ap.parse_args()
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
     names = state_vector_names(spec, include_subtotals=False)
-    real0 = load_real(names).to_numpy(dtype=float)
+    real0 = load_real(names, load_excluded_docs(args.exclude)).to_numpy(dtype=float)
     rows = []
     start_done = False
     for v in args.versions.split(","):
@@ -56,8 +63,8 @@ def main() -> None:
         p = df[df["method"] == "PCFM"]
         if p["config"].nunique() > 1:
             p = p[p["config"] == _CONFIG]
-        if len(p) != 68:
-            raise ValueError(f"{v}: PCFM の行数が 68 でない({len(p)})")
+        if p["docID"].duplicated().any():
+            raise ValueError(f"{v}: 同じ企業の PCFM の行が複数ある")
         if not start_done:
             x0 = p[[f"x0_{n}" for n in names]].to_numpy(dtype=float)
             r = identification_auc_repeated(x0, real0, _REPEATS)
