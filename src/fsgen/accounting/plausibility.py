@@ -125,6 +125,10 @@ class PlausibilityConfig:
     contra_net_nonneg: bool = False  # 控除科目(貸倒引当金)を引いた後の純額が非負(ステージ16)
     # γ: 利益剰余金の増加 RE(t) - RE(0) <= γ × 総資産(0)(ステージ27、R3 のときに使う)
     re_growth_cap: float | None = None
+    # ステージ29 R4: RE の変化を欠損填補の振替と利益に分け、利益部分を [0, γ×総資産(0)] に
+    # 制限する。2 つの分岐(re_decomposition_branches)の和集合なので、build_linear_constraints
+    # には含めず、呼び出し側が分岐ごとに射影して近い方を採る
+    re_decomposition_gamma: float | None = None
     label: str = field(default="S0", compare=False)
 
 
@@ -181,6 +185,71 @@ def load_plausibility_config(path: Path) -> PlausibilityConfig:
         retention_beta=raw.get("retention_beta"),
         contra_net_nonneg=bool(raw.get("contra_net_nonneg", False)),
     )
+
+
+def _unit(names: tuple[str, ...], *accounts: str) -> np.ndarray:
+    idx = {n: i for i, n in enumerate(names)}
+    a = np.zeros(len(names))
+    for nm in accounts:
+        a[idx[nm]] += 1.0
+    return a
+
+
+def re_decomposition_branches(
+    spec: CanonicalSpec,
+    names: tuple[str, ...],
+    x_start: np.ndarray,
+    gamma: float,
+) -> tuple[tuple[LinearConstraint, ...], tuple[LinearConstraint, ...]]:
+    """ステージ29 R4 の 2 つの分岐(それぞれ a·x >= rhs の組)。
+
+    払込資本 = 資本金 + 資本剰余金、ΔX = X(t) − X(0)、A0 = 総資産(0)。
+
+    - 分岐 A(増資・振替なし): Δ払込資本 >= 0、0 <= ΔRE(= 利益部分)<= γ·A0
+    - 分岐 B(減資 = 欠損填補の振替): Δ払込資本 <= 0、振替 = −Δ払込資本(純資産は不変)、
+      0 <= 利益部分 = ΔRE + Δ払込資本 <= γ·A0
+
+    スペックの式 ΔRE = −Δ払込資本 + 利益部分 をそのまま全域に課すと、増資(Δ払込資本 > 0)で
+    RE が同額減り、増資で純資産が増えなくなる。そのため払込資本の増減で分岐させる。
+    分岐の和集合は凸でないので、呼び出し側が両方に射影して近い方を採る
+    (``projection_qp.project_onto_union``)。
+    """
+    if gamma < 0:
+        raise ValueError(f"gamma は 0 以上: {gamma}")
+    members = subtotal_members(spec, names)
+    a0 = float(members["jppfs_cor_Assets"] @ x_start)
+    e_re = _unit(names, _RETAINED_EARNINGS)
+    e_paid = _unit(names, _CAPITAL_STOCK, _CAPITAL_SURPLUS)
+    re0 = float(e_re @ x_start)
+    paid0 = float(e_paid @ x_start)
+    cap = gamma * a0
+    branch_a = (
+        LinearConstraint("R4A:paid>=paid(0)", e_paid, paid0),
+        LinearConstraint("R4A:RE>=RE(0)", e_re, re0),
+        LinearConstraint(f"R4A:RE-RE(0)<={gamma:g}*Assets(0)", -e_re, -(re0 + cap)),
+    )
+    e_eq = e_re + e_paid  # 利益部分 = ΔRE + Δ払込資本
+    branch_b = (
+        LinearConstraint("R4B:paid<=paid(0)", -e_paid, -paid0),
+        LinearConstraint("R4B:profit>=0", e_eq, re0 + paid0),
+        LinearConstraint(f"R4B:profit<={gamma:g}*Assets(0)", -e_eq, -(re0 + paid0 + cap)),
+    )
+    return branch_a, branch_b
+
+
+def decompose_re_change(
+    x0: np.ndarray, x1: np.ndarray, names: tuple[str, ...]
+) -> tuple[np.ndarray, np.ndarray]:
+    """行ごとの (振替, 利益部分)。払込資本が減った分を振替とみなす(実データと同じ規則)。
+
+    振替 = max(0, −Δ払込資本)、利益部分 = ΔRE − 振替。x0, x1 は (n, D) または (D,)。
+    """
+    e_re = _unit(names, _RETAINED_EARNINGS)
+    e_paid = _unit(names, _CAPITAL_STOCK, _CAPITAL_SURPLUS)
+    d_re = (x1 - x0) @ e_re
+    d_paid = (x1 - x0) @ e_paid
+    transfer = np.clip(-d_paid, 0.0, None)
+    return transfer, d_re - transfer
 
 
 def build_linear_constraints(
@@ -371,7 +440,9 @@ __all__ = [
     "PlausibilityConfig",
     "SUBTOTAL_NONNEG_IDS",
     "build_linear_constraints",
+    "decompose_re_change",
     "evaluate_checks",
     "load_plausibility_config",
+    "re_decomposition_branches",
     "subtotal_members",
 ]

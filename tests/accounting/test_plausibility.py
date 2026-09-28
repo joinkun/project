@@ -7,10 +7,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from fsgen.accounting.constraints import load_canonical_spec, state_vector_names
+from fsgen.accounting.constraints import CanonicalSpec, load_canonical_spec, state_vector_names
 from fsgen.accounting.plausibility import (
     RESIDUAL_FLOOR,
     RESIDUAL_LOWER_BOUNDS,
+    LinearConstraint,
     PlausibilityConfig,
     build_linear_constraints,
     evaluate_checks,
@@ -249,3 +250,100 @@ def test_re_growth_cap_constraint() -> None:
     bad[names.index("jppfs_cor_RetainedEarnings")] = 0.21
     assert c.a @ ok >= c.rhs - 1e-12
     assert c.a @ bad < c.rhs
+
+
+def _r4_setup() -> tuple[CanonicalSpec, tuple[str, ...], np.ndarray]:
+    from pathlib import Path
+
+    from fsgen.accounting.constraints import load_canonical_spec, state_vector_names
+
+    spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
+    names = state_vector_names(spec, include_subtotals=False)
+    x0 = np.zeros(len(names))
+    x0[names.index("jppfs_cor_CashAndDeposits")] = 1.0  # 総資産 1
+    x0[names.index("jppfs_cor_CapitalStock")] = 0.8
+    x0[names.index("jppfs_cor_CapitalSurplus")] = 0.5
+    x0[names.index("jppfs_cor_RetainedEarnings")] = -0.3
+    return spec, names, x0
+
+
+def _satisfies(cons: tuple[LinearConstraint, ...], x: np.ndarray) -> bool:
+    return all(float(c.a @ x) >= c.rhs - 1e-12 for c in cons)
+
+
+def test_re_decomposition_branches() -> None:
+    """ステージ29 R4: 分岐 A(増資・振替なし)と分岐 B(欠損填補の振替)。"""
+    from fsgen.accounting.plausibility import re_decomposition_branches
+
+    spec, names, x0 = _r4_setup()
+    br_a, br_b = re_decomposition_branches(spec, names, x0, gamma=0.1)
+    i_re, i_cs = names.index("jppfs_cor_RetainedEarnings"), names.index("jppfs_cor_CapitalStock")
+    assert _satisfies(br_a, x0) and _satisfies(br_b, x0)  # 始点はどちらにも入る
+
+    transfer = x0.copy()  # 資本金 0.3 → RE へ振替(純資産不変)
+    transfer[i_cs] -= 0.3
+    transfer[i_re] += 0.3
+    assert _satisfies(br_b, transfer) and not _satisfies(br_a, transfer)
+
+    transfer_profit = transfer.copy()  # 振替 + 利益 0.1(上限ちょうど)
+    transfer_profit[i_re] += 0.1
+    assert _satisfies(br_b, transfer_profit)
+    transfer_profit[i_re] += 0.01  # 上限超え
+    assert not _satisfies(br_b, transfer_profit)
+
+    issue = x0.copy()  # 増資 0.2、RE は利益 0.05
+    issue[i_cs] += 0.2
+    issue[i_re] += 0.05
+    assert _satisfies(br_a, issue) and not _satisfies(br_b, issue)
+
+    loss = x0.copy()  # RE の減少は許さない(利益部分 >= 0)
+    loss[i_re] -= 0.05
+    assert not _satisfies(br_a, loss) and not _satisfies(br_b, loss)
+
+
+def test_re_decomposition_gamma_zero_blocks_profit() -> None:
+    from fsgen.accounting.plausibility import re_decomposition_branches
+
+    spec, names, x0 = _r4_setup()
+    br_a, br_b = re_decomposition_branches(spec, names, x0, gamma=0.0)
+    i_re = names.index("jppfs_cor_RetainedEarnings")
+    profit = x0.copy()
+    profit[i_re] += 0.01
+    assert not _satisfies(br_a, profit) and not _satisfies(br_b, profit)
+
+
+def test_decompose_re_change() -> None:
+    from fsgen.accounting.plausibility import decompose_re_change
+
+    _spec, names, x0 = _r4_setup()
+    i_re, i_cs = names.index("jppfs_cor_RetainedEarnings"), names.index("jppfs_cor_CapitalStock")
+    x1 = x0.copy()
+    x1[i_cs] -= 0.3
+    x1[i_re] += 0.4
+    t, p = decompose_re_change(x0[None, :], x1[None, :], names)
+    assert np.allclose(t, [0.3]) and np.allclose(p, [0.1])
+    x2 = x0.copy()
+    x2[i_cs] += 0.2  # 増資は振替にしない
+    x2[i_re] += 0.1
+    t, p = decompose_re_change(x0[None, :], x2[None, :], names)
+    assert np.allclose(t, [0.0]) and np.allclose(p, [0.1])
+
+
+def test_project_onto_union_picks_nearer_branch() -> None:
+    from fsgen.accounting.plausibility import re_decomposition_branches
+    from fsgen.accounting.projection_qp import project_onto_union
+
+    spec, names, x0 = _r4_setup()
+    branches = re_decomposition_branches(spec, names, x0, gamma=0.0)
+    i_re, i_cs = names.index("jppfs_cor_RetainedEarnings"), names.index("jppfs_cor_CapitalStock")
+    y = x0.copy()  # 振替に近い点: 資本金 −0.3、RE +0.3
+    y[i_cs] -= 0.3
+    y[i_re] += 0.3
+    x, _info, k = project_onto_union(y, spec, x0, branches)
+    assert k == 1
+    assert np.isclose(x[i_re] - x0[i_re], -(x[i_cs] - x0[i_cs]), atol=1e-6)
+    y2 = x0.copy()  # 増資に近い点
+    y2[i_cs] += 0.3
+    x2, _info2, k2 = project_onto_union(y2, spec, x0, branches)
+    assert k2 == 0
+    assert np.isclose(x2[i_re], x0[i_re], atol=1e-6)

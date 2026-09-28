@@ -44,11 +44,14 @@ from fsgen.accounting.plausibility import (  # noqa: E402
     PlausibilityConfig,
     apply_layers,
     build_linear_constraints,
+    decompose_re_change,
     load_constraint_layers,
+    re_decomposition_branches,
 )
 from fsgen.accounting.projection_qp import (  # noqa: E402
     load_direction_constraints,
     project_onto_feasible,
+    project_onto_union,
 )
 from fsgen.accounting.subspace import build_reduced_basis  # noqa: E402
 from fsgen.datasets.exclusion import (  # noqa: E402
@@ -87,6 +90,7 @@ _DELTA = 1e-3
 def make_configs(
     layers: ConstraintLayers | None = None,
     re_cap: float | None = None,
+    re_decomp: tuple[float, ...] = (),
 ) -> dict[str, tuple[str, PlausibilityConfig]]:
     """設定名 -> (重み条件, 追加制約)。layers.layer2=False なら全設定が第1層のみ(=S0)になる。"""
     layers = layers or ConstraintLayers()
@@ -107,6 +111,11 @@ def make_configs(
         name = f"W1_S5_a05_b03_re{re_cap:g}"
         capped = dataclasses.replace(base, re_growth_cap=re_cap, label=name)
         out[name] = ("W1", apply_layers(capped, layers))
+    for gamma in re_decomp:  # ステージ29 R4: 欠損填補の振替と利益部分(上限 γ)の分離
+        base = out["W1_S5_a05_b03"][1]
+        name = f"W1_S5_a05_b03_r4g{gamma:g}"
+        r4 = dataclasses.replace(base, re_decomposition_gamma=gamma, label=name)
+        out[name] = ("W1", apply_layers(r4, layers))
     return out
 
 
@@ -150,6 +159,8 @@ def main() -> None:  # noqa: PLR0915
                     help="constraint_layersを読むcore.yaml(省略時は全層有効)")
     ap.add_argument("--re-cap", type=float, default=None,
                     help="利益剰余金の増加の上限 γ(総資産比、ステージ27)")
+    ap.add_argument("--re-decomp", default="",
+                    help="R4 の利益部分の上限 γ のカンマ区切り(ステージ29。空なら作らない)")
     ap.add_argument("--k", type=int, default=_K,
                     help="低次元基底の次元(既定13。ステージ17 F: 感度確認用に14を1回試す)")
     args = ap.parse_args()
@@ -168,7 +179,8 @@ def main() -> None:  # noqa: PLR0915
     w1 = (np.ones(dim), np.ones(dim))
     w3 = cost_vectors(cost_config, names, non_actionable_mode="keep")
     weights_by_cond = {"W1": w1, "W3": w3}
-    configs = make_configs(layers, args.re_cap)
+    re_decomp = tuple(float(g) for g in args.re_decomp.split(",") if g)
+    configs = make_configs(layers, args.re_cap, re_decomp)
     if args.configs:
         configs = {k: configs[k] for k in args.configs.split(",")}
 
@@ -189,11 +201,14 @@ def main() -> None:  # noqa: PLR0915
     rows: list[dict[str, float | int | str]] = []
 
     def add(config: str, method: str, k: int, p: int, path: np.ndarray, status: str,
-            active: str) -> None:
+            active: str, re_branch: int = -1) -> None:
+        # ステージ29: RE の変化の分解(振替・利益部分、総資産(0)比)。出力の状態ベクトルには含めない
+        transfer, profit = decompose_re_change(path[0], path[-1], names)
         row: dict[str, float | int | str] = {
             "tag": args.tag, "config": config, "seed": args.seed, "fold": k, "method": method,
             "docID": doc2[p], "filerName": name2[p], "assets_start": float(assets[idx2[p]]),
-            "status": status, "active": active,
+            "status": status, "active": active, "re_branch": re_branch,
+            "re_transfer": float(transfer), "re_profit": float(profit),
         }
         for j, name in enumerate(names):
             row[f"x0_{name}"] = float(path[0, j])
@@ -234,19 +249,31 @@ def main() -> None:  # noqa: PLR0915
                 weights = combined_projection_weights(x_start, 1.0, wp, wm, _DELTA)
                 extra = build_linear_constraints(spec, names, x_start, cfg)
                 out = raw[i_local].copy()
-                status, active = "ok", ""
+                status, active, branch = "ok", "", -1
+                gamma = cfg.re_decomposition_gamma
+                branches = (
+                    re_decomposition_branches(spec, names, x_start, gamma)
+                    if gamma is not None else None
+                )
                 try:
                     for t_i in range(out.shape[0]):  # 毎ステップ射影(t=0,1)
-                        out[t_i], info = project_onto_feasible(
-                            raw[i_local][t_i], spec, x_start=x_start, weights=weights,
-                            direction_constraints=dcs, frozen_accounts=frozen,
-                            extra_constraints=extra,
-                        )
+                        if branches is None:
+                            out[t_i], info = project_onto_feasible(
+                                raw[i_local][t_i], spec, x_start=x_start, weights=weights,
+                                direction_constraints=dcs, frozen_accounts=frozen,
+                                extra_constraints=extra,
+                            )
+                        else:  # R4: 2 つの分岐の和集合への射影(近い方の分岐を採る)
+                            out[t_i], info, branch = project_onto_union(
+                                raw[i_local][t_i], spec, x_start, branches, weights=weights,
+                                extra_constraints=extra, direction_constraints=dcs,
+                                frozen_accounts=frozen,
+                            )
                     active = ";".join(info.active_constraints)
                 except InfeasibleProjectionError:
                     out = np.repeat(x_start[None, :], out.shape[0], axis=0)  # 動かせない
                     status = "infeasible"
-                add(cname, "PCFM", k, int(p), out, status, active)
+                add(cname, "PCFM", k, int(p), out, status, active, branch)
         print(f"  [{tag}] fold {k + 1}/{args.n_folds} 完了({time.perf_counter() - t0:.0f}s)",
               flush=True)
 

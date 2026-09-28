@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -290,6 +291,41 @@ def project_onto_feasible(
     return x_result, info
 
 
+def project_onto_union(
+    y: np.ndarray,
+    spec: CanonicalSpec,
+    x_start: np.ndarray,
+    branches: Sequence[tuple[LinearConstraint, ...]],
+    weights: np.ndarray | None = None,
+    extra_constraints: tuple[LinearConstraint, ...] = (),
+    direction_constraints: tuple[DirectionConstraintSpec, ...] = (),
+    frozen_accounts: tuple[str, ...] = (),
+) -> tuple[np.ndarray, ProjectionInfo, int]:
+    """凸集合の和集合への射影(ステージ29 R4)。分岐ごとに射影し、目的関数が最小の解を採る。
+
+    目的関数は ``project_onto_feasible`` と同じ ‖W^{1/2}(x − y)‖²。実行不可能な分岐は飛ばし、
+    すべて実行不可能なら ``InfeasibleProjectionError``。未収束(``SolverNotConvergedError``)は
+    そのまま送出する。戻り値の最後は採った分岐の番号。
+    """
+    w = np.ones(len(y)) if weights is None else np.asarray(weights, dtype=float)
+    best: tuple[float, np.ndarray, ProjectionInfo, int] | None = None
+    for k, branch in enumerate(branches):
+        try:
+            x, info = project_onto_feasible(
+                y, spec, x_start=x_start, weights=weights,
+                direction_constraints=direction_constraints, frozen_accounts=frozen_accounts,
+                extra_constraints=(*extra_constraints, *branch),
+            )
+        except InfeasibleProjectionError:
+            continue
+        obj = float(np.sum(w * (x - y) ** 2))
+        if best is None or obj < best[0]:
+            best = (obj, x, info, k)
+    if best is None:
+        raise InfeasibleProjectionError("和集合のどの分岐も実行不可能")
+    return best[1], best[2], best[3]
+
+
 def default_weights(x_start: np.ndarray, assets: float) -> np.ndarray:
     """W = diag(1 / (|x_start| + eps))(§3.1)。eps は総資産の1e-6程度。"""
     return _default_weights(x_start, assets)
@@ -387,4 +423,5 @@ __all__ = [
     "is_feasible",
     "load_direction_constraints",
     "project_onto_feasible",
+    "project_onto_union",
 ]
