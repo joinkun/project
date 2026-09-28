@@ -1,0 +1,17 @@
+{
+  "n_gc_firms": 50,
+  "share_re_up": 0.2,
+  "share_re_up_band": [
+    0.1,
+    0.30000000000000004
+  ],
+  "profit_annual_p90": -0.002785477858110155,
+  "gamma": 0.0,
+  "n_transfer_firms": 14,
+  "transfer_5y_band": [
+    0.04902213732310752,
+    5.872633322807796
+  ],
+  "threshold_annual": 0.001,
+  "years": 5.0
+}
