@@ -1,0 +1,135 @@
+# ステージ32: scripts/build_costs_stage32.py が生成(手で編集しない)。
+name: costs_frequency
+basis_costs:
+- name: __OTHER__jppfs_cor_Assets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: inventories
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: receivables_trade
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: jppfs_cor_CashAndDeposits
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: jppfs_cor_OtherCA
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: allowance_doubtful_current
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: __OTHER__jppfs_cor_CurrentAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: jppfs_cor_PropertyPlantAndEquipment
+  cost_increase: 1.0
+  cost_decrease: 4.8571
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 総資産の 20% 超の資産売却: f = 21/102 = 0.206。AGS WP 本文(p.17)「Twenty-one companies sell more than 20% of their assets」(102 社中)。売却は現金・非現金の対価の合計 / 前年度の総資産で測る。売却した資産の科目は区別されていない'
+- name: jppfs_cor_IntangibleAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: jppfs_cor_InvestmentsAndOtherAssets
+  cost_increase: 1.0
+  cost_decrease: 4.8571
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 総資産の 20% 超の資産売却: f = 21/102 = 0.206。AGS WP 本文(p.17)「Twenty-one companies sell more than 20% of their assets」(102 社中)。売却は現金・非現金の対価の合計 / 前年度の総資産で測る。売却した資産の科目は区別されていない'
+- name: allowance_doubtful_noncurrent
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: __OTHER__jppfs_cor_NoncurrentAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: short_term_loans
+  cost_increase: 1.0
+  cost_decrease: 4.6364
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 主要な与信枠の縮小(銀行が与信枠を減らすか、残高の返済を求める): f = 22/102 = 0.216。AGS WP Table 3(p.32)「Reduction in main credit facility」22 社(76 社中 0.29)。本文(p.12)では 21 件。私的債務の再建 59 社(78%)の大半は条項の免除(37)・期限延長(28)で、残高を減らさない。元本の免除はほぼない(本文 p.3。例外は Zapata の 1 件、p.11)'
+- name: jppfs_cor_IncomeTaxesPayable
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: jppfs_cor_OtherCL
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: payables_trade
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: accounts_payable_other
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: bonds_current
+  cost_increase: 1.0
+  cost_decrease: 3.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 公募債の交換の成功: f = 34/102 = 0.333。AGS WP Table 3(p.32)「Successful Exchange Offer」34 社(76 社中 0.45)。交換は現金・証券との交換で元本の削減か満期の延長をもたらす(本文 p.14)'
+- name: __OTHER__jppfs_cor_CurrentLiabilities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: __OTHER__jppfs_cor_Liabilities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: long_term_loans
+  cost_increase: 1.0
+  cost_decrease: 4.6364
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 主要な与信枠の縮小(銀行が与信枠を減らすか、残高の返済を求める): f = 22/102 = 0.216。AGS WP Table 3(p.32)「Reduction in main credit facility」22 社(76 社中 0.29)。本文(p.12)では 21 件。私的債務の再建 59 社(78%)の大半は条項の免除(37)・期限延長(28)で、残高を減らさない。元本の免除はほぼない(本文 p.3。例外は Zapata の 1 件、p.11)'
+- name: bonds_noncurrent
+  cost_increase: 1.0
+  cost_decrease: 3.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 公募債の交換の成功: f = 34/102 = 0.333。AGS WP Table 3(p.32)「Successful Exchange Offer」34 社(76 社中 0.45)。交換は現金・証券との交換で元本の削減か満期の延長をもたらす(本文 p.14)'
+- name: __OTHER__jppfs_cor_NoncurrentLiabilities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: non_controlling_interests
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: __OTHER__jppfs_cor_NetAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: jppfs_cor_RetainedEarnings
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: jppfs_cor_CapitalStock
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: jppfs_cor_CapitalSurplus
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: jppfs_cor_TreasuryStock
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: __OTHER__jppfs_cor_ShareholdersEquity
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: valuation_difference_securities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+- name: __OTHER__jppfs_cor_ValuationAndTranslationAdjustments
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0)'
+non_actionable:
+- jppfs_cor_RetainedEarnings
+- valuation_difference_securities
+- non_controlling_interests

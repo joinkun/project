@@ -1,0 +1,135 @@
+# ステージ32: scripts/build_costs_stage32.py が生成(手で編集しない)。
+name: costs_frequency_asym
+basis_costs:
+- name: __OTHER__jppfs_cor_Assets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(非対称性を推定できない(β1 か β1+β2 が 5% 水準で正でない)。r = 1)'
+- name: inventories
+  cost_increase: 0.7472
+  cost_decrease: 1.3383
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 0.838、β1+β2 = 0.468、r = 1.79))'
+- name: receivables_trade
+  cost_increase: 0.9066
+  cost_decrease: 1.103
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 0.664、β1+β2 = 0.546、r = 1.22))'
+- name: jppfs_cor_CashAndDeposits
+  cost_increase: 1.0974
+  cost_decrease: 0.9113
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 0.822、β1+β2 = 0.989、r = 0.83))'
+- name: jppfs_cor_OtherCA
+  cost_increase: 0.7614
+  cost_decrease: 1.3133
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 0.808、β1+β2 = 0.469、r = 1.72))'
+- name: allowance_doubtful_current
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(非対称性を推定できない(β1 か β1+β2 が 5% 水準で正でない)。r = 1)'
+- name: __OTHER__jppfs_cor_CurrentAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(非対称性を推定できない(β1 か β1+β2 が 5% 水準で正でない)。r = 1)'
+- name: jppfs_cor_PropertyPlantAndEquipment
+  cost_increase: 1.1606
+  cost_decrease: 4.1849
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 総資産の 20% 超の資産売却: f = 21/102 = 0.206。AGS WP 本文(p.17)「Twenty-one companies sell more than 20% of their assets」(102 社中)。売却は現金・非現金の対価の合計 / 前年度の総資産で測る。売却した資産の科目は区別されていない)× 非対称性(自前の ABJ 型回帰(β1 = 0.790、β1+β2 = 1.064、r = 0.74))'
+- name: jppfs_cor_IntangibleAssets
+  cost_increase: 0.891
+  cost_decrease: 1.1223
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 1.344、β1+β2 = 1.067、r = 1.26))'
+- name: jppfs_cor_InvestmentsAndOtherAssets
+  cost_increase: 0.6492
+  cost_decrease: 7.4814
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 総資産の 20% 超の資産売却: f = 21/102 = 0.206。AGS WP 本文(p.17)「Twenty-one companies sell more than 20% of their assets」(102 社中)。売却は現金・非現金の対価の合計 / 前年度の総資産で測る。売却した資産の科目は区別されていない)× 非対称性(自前の ABJ 型回帰(β1 = 0.779、β1+β2 = 0.328、r = 2.37))'
+- name: allowance_doubtful_noncurrent
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(非対称性を推定できない(β1 か β1+β2 が 5% 水準で正でない)。r = 1)'
+- name: __OTHER__jppfs_cor_NoncurrentAssets
+  cost_increase: 1.1099
+  cost_decrease: 0.901
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 0.179、β1+β2 = 0.221、r = 0.81))'
+- name: short_term_loans
+  cost_increase: 0.959
+  cost_decrease: 4.8345
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 主要な与信枠の縮小(銀行が与信枠を減らすか、残高の返済を求める): f = 22/102 = 0.216。AGS WP Table 3(p.32)「Reduction in main credit facility」22 社(76 社中 0.29)。本文(p.12)では 21 件。私的債務の再建 59 社(78%)の大半は条項の免除(37)・期限延長(28)で、残高を減らさない。元本の免除はほぼない(本文 p.3。例外は Zapata の 1 件、p.11))× 非対称性(自前の ABJ 型回帰(β1 = 1.186、β1+β2 = 1.091、r = 1.09))'
+- name: jppfs_cor_IncomeTaxesPayable
+  cost_increase: 0.9244
+  cost_decrease: 1.0818
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 1.623、β1+β2 = 1.387、r = 1.17))'
+- name: jppfs_cor_OtherCL
+  cost_increase: 1.0414
+  cost_decrease: 0.9603
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 0.685、β1+β2 = 0.743、r = 0.92))'
+- name: payables_trade
+  cost_increase: 0.9265
+  cost_decrease: 1.0793
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 0.768、β1+β2 = 0.659、r = 1.16))'
+- name: accounts_payable_other
+  cost_increase: 0.8109
+  cost_decrease: 1.2332
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 0.835、β1+β2 = 0.549、r = 1.52))'
+- name: bonds_current
+  cost_increase: 1.0
+  cost_decrease: 3.0
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 公募債の交換の成功: f = 34/102 = 0.333。AGS WP Table 3(p.32)「Successful Exchange Offer」34 社(76 社中 0.45)。交換は現金・証券との交換で元本の削減か満期の延長をもたらす(本文 p.14))× 非対称性(非対称性を推定できない(β1 か β1+β2 が 5% 水準で正でない)。r = 1)'
+- name: __OTHER__jppfs_cor_CurrentLiabilities
+  cost_increase: 0.869
+  cost_decrease: 1.1507
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 0.979、β1+β2 = 0.739、r = 1.32))'
+- name: __OTHER__jppfs_cor_Liabilities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(非対称性を推定できない(β1 か β1+β2 が 5% 水準で正でない)。r = 1)'
+- name: long_term_loans
+  cost_increase: 0.8126
+  cost_decrease: 5.7056
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 主要な与信枠の縮小(銀行が与信枠を減らすか、残高の返済を求める): f = 22/102 = 0.216。AGS WP Table 3(p.32)「Reduction in main credit facility」22 社(76 社中 0.29)。本文(p.12)では 21 件。私的債務の再建 59 社(78%)の大半は条項の免除(37)・期限延長(28)で、残高を減らさない。元本の免除はほぼない(本文 p.3。例外は Zapata の 1 件、p.11))× 非対称性(自前の ABJ 型回帰(β1 = 1.224、β1+β2 = 0.809、r = 1.51))'
+- name: bonds_noncurrent
+  cost_increase: 1.0
+  cost_decrease: 3.0
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 公募債の交換の成功: f = 34/102 = 0.333。AGS WP Table 3(p.32)「Successful Exchange Offer」34 社(76 社中 0.45)。交換は現金・証券との交換で元本の削減か満期の延長をもたらす(本文 p.14))× 非対称性(非対称性を推定できない(β1 か β1+β2 が 5% 水準で正でない)。r = 1)'
+- name: __OTHER__jppfs_cor_NoncurrentLiabilities
+  cost_increase: 0.9525
+  cost_decrease: 1.0499
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 0.894、β1+β2 = 0.811、r = 1.10))'
+- name: non_controlling_interests
+  cost_increase: 0.727
+  cost_decrease: 1.3756
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 1.622、β1+β2 = 0.857、r = 1.89))'
+- name: __OTHER__jppfs_cor_NetAssets
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(非対称性を推定できない(β1 か β1+β2 が 5% 水準で正でない)。r = 1)'
+- name: jppfs_cor_RetainedEarnings
+  cost_increase: 1.2724
+  cost_decrease: 0.7859
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 0.697、β1+β2 = 1.128、r = 0.62))'
+- name: jppfs_cor_CapitalStock
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(非対称性を推定できない(β1 か β1+β2 が 5% 水準で正でない)。r = 1)'
+- name: jppfs_cor_CapitalSurplus
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(非対称性を推定できない(β1 か β1+β2 が 5% 水準で正でない)。r = 1)'
+- name: jppfs_cor_TreasuryStock
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(非対称性を推定できない(β1 か β1+β2 が 5% 水準で正でない)。r = 1)'
+- name: __OTHER__jppfs_cor_ShareholdersEquity
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(非対称性を推定できない(β1 か β1+β2 が 5% 水準で正でない)。r = 1)'
+- name: valuation_difference_securities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(非対称性を推定できない(β1 か β1+β2 が 5% 水準で正でない)。r = 1)'
+- name: __OTHER__jppfs_cor_ValuationAndTranslationAdjustments
+  cost_increase: 0.4677
+  cost_decrease: 2.1383
+  source: '頻度(w+: 該当する施策の頻度データなし。等重み(1.0) / w-: 該当する施策の頻度データなし。等重み(1.0))× 非対称性(自前の ABJ 型回帰(β1 = 1.137、β1+β2 = 0.249、r = 4.57))'
+non_actionable:
+- jppfs_cor_RetainedEarnings
+- valuation_difference_securities
+- non_controlling_interests

@@ -1,0 +1,135 @@
+# ステージ32: scripts/build_costs_stage32.py が生成(手で編集しない)。
+name: costs_persistence
+basis_costs:
+- name: __OTHER__jppfs_cor_Assets
+  cost_increase: 0.0796
+  cost_decrease: 0.0796
+  source: 持続性 ρ1 = 0.242(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: inventories
+  cost_increase: 2.4247
+  cost_decrease: 2.4247
+  source: 持続性 ρ1 = 0.975(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: receivables_trade
+  cost_increase: 1.2264
+  cost_decrease: 1.2264
+  source: 持続性 ρ1 = 0.951(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: jppfs_cor_CashAndDeposits
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 持続性 ρ1 = 0.940(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: jppfs_cor_OtherCA
+  cost_increase: 0.3933
+  cost_decrease: 0.3933
+  source: 持続性 ρ1 = 0.847(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: allowance_doubtful_current
+  cost_increase: 0.5706
+  cost_decrease: 0.5706
+  source: 持続性 ρ1 = 0.894(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: __OTHER__jppfs_cor_CurrentAssets
+  cost_increase: 0.7144
+  cost_decrease: 0.7144
+  source: 持続性 ρ1 = 0.916(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: jppfs_cor_PropertyPlantAndEquipment
+  cost_increase: 3.6648
+  cost_decrease: 3.6648
+  source: 持続性 ρ1 = 0.984(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: jppfs_cor_IntangibleAssets
+  cost_increase: 0.6706
+  cost_decrease: 0.6706
+  source: 持続性 ρ1 = 0.910(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: jppfs_cor_InvestmentsAndOtherAssets
+  cost_increase: 1.0927
+  cost_decrease: 1.0927
+  source: 持続性 ρ1 = 0.945(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: allowance_doubtful_noncurrent
+  cost_increase: 0.6954
+  cost_decrease: 0.6954
+  source: 持続性 ρ1 = 0.913(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: __OTHER__jppfs_cor_NoncurrentAssets
+  cost_increase: 0.5167
+  cost_decrease: 0.5167
+  source: 持続性 ρ1 = 0.883(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: short_term_loans
+  cost_increase: 0.5732
+  cost_decrease: 0.5732
+  source: 持続性 ρ1 = 0.895(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: jppfs_cor_IncomeTaxesPayable
+  cost_increase: 0.133
+  cost_decrease: 0.133
+  source: 持続性 ρ1 = 0.546(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: jppfs_cor_OtherCL
+  cost_increase: 0.8469
+  cost_decrease: 0.8469
+  source: 持続性 ρ1 = 0.929(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: payables_trade
+  cost_increase: 2.0921
+  cost_decrease: 2.0921
+  source: 持続性 ρ1 = 0.971(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: accounts_payable_other
+  cost_increase: 2.2245
+  cost_decrease: 2.2245
+  source: 持続性 ρ1 = 0.973(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: bonds_current
+  cost_increase: 0.1967
+  cost_decrease: 0.1967
+  source: 持続性 ρ1 = 0.693(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: __OTHER__jppfs_cor_CurrentLiabilities
+  cost_increase: 0.8614
+  cost_decrease: 0.8614
+  source: 持続性 ρ1 = 0.930(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: __OTHER__jppfs_cor_Liabilities
+  cost_increase: 0.0684
+  cost_decrease: 0.0684
+  source: 持続性 ρ1 = 0.118(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: long_term_loans
+  cost_increase: 0.7513
+  cost_decrease: 0.7513
+  source: 持続性 ρ1 = 0.920(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: bonds_noncurrent
+  cost_increase: 0.6052
+  cost_decrease: 0.6052
+  source: 持続性 ρ1 = 0.900(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: __OTHER__jppfs_cor_NoncurrentLiabilities
+  cost_increase: 1.1091
+  cost_decrease: 1.1091
+  source: 持続性 ρ1 = 0.946(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: non_controlling_interests
+  cost_increase: 1.1494
+  cost_decrease: 1.1494
+  source: 持続性 ρ1 = 0.948(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: __OTHER__jppfs_cor_NetAssets
+  cost_increase: 0.2095
+  cost_decrease: 0.2095
+  source: 持続性 ρ1 = 0.712(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: jppfs_cor_RetainedEarnings
+  cost_increase: 2.866
+  cost_decrease: 2.866
+  source: 持続性 ρ1 = 0.979(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: jppfs_cor_CapitalStock
+  cost_increase: 0.7598
+  cost_decrease: 0.7598
+  source: 持続性 ρ1 = 0.921(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: jppfs_cor_CapitalSurplus
+  cost_increase: 1.6291
+  cost_decrease: 1.6291
+  source: 持続性 ρ1 = 0.963(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: jppfs_cor_TreasuryStock
+  cost_increase: 0.6286
+  cost_decrease: 0.6286
+  source: 持続性 ρ1 = 0.904(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: __OTHER__jppfs_cor_ShareholdersEquity
+  cost_increase: 0.1139
+  cost_decrease: 0.1139
+  source: 持続性 ρ1 = 0.470(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: valuation_difference_securities
+  cost_increase: 0.7904
+  cost_decrease: 0.7904
+  source: 持続性 ρ1 = 0.924(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+- name: __OTHER__jppfs_cor_ValuationAndTranslationAdjustments
+  cost_increase: 0.2968
+  cost_decrease: 0.2968
+  source: 持続性 ρ1 = 0.797(ρ現金 = 0.940)、c = (1−ρ現金)/(1−ρ)
+non_actionable:
+- jppfs_cor_RetainedEarnings
+- valuation_difference_securities
+- non_controlling_interests
