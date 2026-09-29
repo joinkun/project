@@ -26,6 +26,8 @@ VERSIONS = ("r1", "r3", "r3_cap", "r4")
 LABELS = {
     "r1": "R1", "r3": "R3", "r3_cap": "R3+上限", "r4": "R4(γ=0)",
     "r3_cap076": "最終(R3+上限 0.757)",
+    "equal": "等重み", "frequency": "頻度", "persistence": "持続性",
+    "frequency_asym": "頻度+非対称",
 }
 AMAGASA = "S100TBIV"
 _CS, _CSUR = "jppfs_cor_CapitalStock", "jppfs_cor_CapitalSurplus"
@@ -40,12 +42,11 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--dir", type=Path, default=Path("data/interim/stage29"))
     ap.add_argument("--out", type=Path, default=Path("results/stage29/bs"))
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--versions", default=",".join(VERSIONS), help="並べる版(r1 を含むこと)")
+    ap.add_argument("--versions", default=",".join(VERSIONS),
+                    help="並べる版。企業の選択には先頭の版の始点を使う(始点は版によらない)")
     ap.add_argument("--title", default="ステージ29 C.4: 同じ 5 社の BS(4 版)")
     args = ap.parse_args()
     versions = tuple(args.versions.split(","))
-    if "r1" not in versions:
-        raise ValueError("企業の選択に r1 を使うので --versions に r1 を含めること")
     args.out.mkdir(parents=True, exist_ok=True)
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
     names = state_vector_names(spec, include_subtotals=False)
@@ -62,7 +63,7 @@ def main() -> None:  # noqa: PLR0915
         v: pd.read_csv(args.dir / v / "full_targets_nearest_na0.csv").set_index("source_docID")
         for v in versions
     }
-    base = gen["r1"]
+    base = gen[versions[0]]
     pool = sorted(set(base.index) - set(OUTLIERS) - {AMAGASA})
     na0 = {d: float(base.loc[d, x0c].to_numpy(dtype=float) @ members["jppfs_cor_NetAssets"])
            for d in pool}
