@@ -59,6 +59,9 @@ class BasisSpec:
 class SubtotalSpec:
     element_id: str
     side: str
+    # ステージ39: 開いた小計(有形固定資産など)の親の小計。固定の階層(SUBTOTAL_CHILDREN)に
+    # 載らない小計だけに書く。None なら従来どおり
+    parent: str | None = None
 
 
 @dataclass(frozen=True)
@@ -87,9 +90,19 @@ def load_canonical_spec(path: Path) -> CanonicalSpec:
         for b in doc["basis"]
     )
     subtotals = tuple(
-        SubtotalSpec(element_id=s["element_id"], side=s["side"]) for s in doc["subtotals"]
+        SubtotalSpec(element_id=s["element_id"], side=s["side"], parent=s.get("parent"))
+        for s in doc["subtotals"]
     )
     return CanonicalSpec(name=doc["name"], basis=basis, subtotals=subtotals)
+
+
+def subtotal_children(spec: CanonicalSpec) -> dict[str, tuple[str, ...]]:
+    """小計 → 直下の小計。固定の階層(SUBTOTAL_CHILDREN)に、canonical の ``parent`` を加える。"""
+    out = {k: tuple(v) for k, v in SUBTOTAL_CHILDREN.items()}
+    for s in spec.subtotals:
+        if s.parent is not None:
+            out[s.parent] = (*out.get(s.parent, ()), s.element_id)
+    return out
 
 
 def state_vector_names(spec: CanonicalSpec, include_subtotals: bool) -> tuple[str, ...]:
@@ -114,11 +127,12 @@ def build_constraint_matrix(spec: CanonicalSpec, include_subtotals: bool) -> np.
         return c
 
     rows: list[np.ndarray] = []
+    children_of = subtotal_children(spec)
     # 各小計・合計の定義制約: s - Σ(直下の小計) - Σ(直下の基礎科目) = 0。
     for s in spec.subtotals:
         row = np.zeros(dim)
         row[index[s.element_id]] = 1.0
-        for child in SUBTOTAL_CHILDREN.get(s.element_id, ()):
+        for child in children_of.get(s.element_id, ()):
             row[index[child]] -= 1.0
         for b in spec.basis:
             if b.parent_subtotal == s.element_id:

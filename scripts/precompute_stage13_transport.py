@@ -79,13 +79,16 @@ _SOFT_LAM = 1.0  # ステージ17 §B: ソフト業種制約のλ(コスト中�
 
 
 def parse_design(name: str) -> tuple[str, float, float]:
-    """設計名 → (kind, τ(unbのみ), 非操作科目の重みw)。"""
-    pat = r"(bal|onesided|nearestu|nearest|unb(?P<tau>[0-9.]+))_na(?P<w>[0-9.e+\-]+)"
+    """設計名 → (kind, τ(unb の τ、bal の ε(ステージ39)。省略時 0), 非操作科目の重みw)。"""
+    pat = (r"(bal(?P<eps>[0-9.]+)?|onesided|nearestu|nearest|unb(?P<tau>[0-9.]+))"
+           r"_na(?P<w>[0-9.e+\-]+)")
     m = re.fullmatch(pat, name)
     if m is None:
         raise ValueError(f"設計名が不正: {name!r}(例: bal_na0, unb1_na0, onesided_na1e+06)")
     kind = m.group(1)
     tau = float(m.group("tau")) if m.group("tau") else 0.0
+    if kind.startswith("bal"):
+        return "bal", float(m.group("eps")) if m.group("eps") else 0.0, float(m.group("w"))
     return ("unb" if kind.startswith("unb") else kind), tau, float(m.group("w"))
 
 
@@ -99,8 +102,9 @@ def solve_plan(kind: str, tau: float, cost_n: np.ndarray) -> np.ndarray:
     a = np.full(n0, 1.0 / n0)
     b = np.full(n1, 1.0 / n1)
     if kind == "bal":
+        eps = tau if tau > 0 else _EPSILON  # ステージ39: bal<ε>_na<w> で ε を指定できる
         plan = solve_ot_normalized(
-            cost_n, a, b, _EPSILON, log_domain=True, stop_thr=_LOG_STOP_THR
+            cost_n, a, b, eps, log_domain=True, stop_thr=_LOG_STOP_THR
         ).plan  # 未収束なら例外(§A.1)
         check_plan_health(plan, a, b)
     elif kind == "unb":

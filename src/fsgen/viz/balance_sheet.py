@@ -89,6 +89,20 @@ def build_bs_lines(
         for child_id in SUBTOTAL_CHILDREN.get(top_id, ()):
             lines.append(BSLine(_label(labels, child_id), 1, "group", None))
             child_sum = zero
+            # ステージ39: 開いた小計(有形固定資産など)は、その配下を 1 段深く表示して小計を付ける
+            for sub in (s for s in spec.subtotals if s.parent == child_id):
+                lines.append(BSLine(_label(labels, sub.element_id), 2, "group", None))
+                sub_sum = zero
+                for b in spec.basis:
+                    if b.parent_subtotal != sub.element_id:
+                        continue
+                    vals = value_of(b.name)
+                    lines.append(BSLine(_label(labels, b.name), 3, "item", vals))
+                    sub_sum = add(sub_sum, vals)
+                lines.append(
+                    BSLine(_label(labels, sub.element_id, as_total=True), 2, "subtotal", sub_sum)
+                )
+                child_sum = add(child_sum, sub_sum)
             for b in spec.basis:
                 if b.parent_subtotal != child_id:
                     continue

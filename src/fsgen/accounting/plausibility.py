@@ -73,6 +73,11 @@ RESIDUAL_NONNEG_ACCOUNTS = (
     "__OTHER__jppfs_cor_NetAssets",
     "__OTHER__jppfs_cor_ShareholdersEquity",
 )
+# ステージ39: 開いた小計の残余。実データで下限を満たすことを確かめてから載せる
+_EXPANDED_RESIDUALS = (
+    "__OTHER__jppfs_cor_PropertyPlantAndEquipment",
+    "__OTHER__jppfs_cor_InvestmentsAndOtherAssets",
+)
 RESIDUAL_LOWER_BOUNDS: dict[str, float] = dict.fromkeys(RESIDUAL_NONNEG_ACCOUNTS, RESIDUAL_FLOOR)
 
 
@@ -88,6 +93,17 @@ def subtotal_members(spec: CanonicalSpec, names: tuple[str, ...]) -> dict[str, n
                 v[idx[b.name]] = 1.0
         return v
 
+    # ステージ39: 開いた小計(parent を持つ小計)の配下の基礎科目も、親の小計に含める
+    descendants: dict[str, set[str]] = {s.element_id: {s.element_id} for s in spec.subtotals}
+    changed = True
+    while changed:
+        changed = False
+        for s in spec.subtotals:
+            if s.parent is not None and s.parent in descendants:
+                before = len(descendants[s.parent])
+                descendants[s.parent] |= descendants[s.element_id]
+                changed = changed or len(descendants[s.parent]) != before
+
     for sub in spec.subtotals:
         if sub.element_id == "jppfs_cor_Assets":
             members[sub.element_id] = vec(lambda b: b.side == "assets")
@@ -96,8 +112,37 @@ def subtotal_members(spec: CanonicalSpec, names: tuple[str, ...]) -> dict[str, n
         elif sub.element_id == "jppfs_cor_NetAssets":
             members[sub.element_id] = vec(lambda b: b.side == "net_assets")
         else:
-            members[sub.element_id] = vec(lambda b, s=sub.element_id: b.parent_subtotal == s)
+            members[sub.element_id] = vec(
+                lambda b, d=frozenset(descendants[sub.element_id]): b.parent_subtotal in d
+            )
     return members
+
+
+def account_indicator(
+    spec: CanonicalSpec, names: tuple[str, ...], accounts: tuple[str, ...]
+) -> np.ndarray:
+    """科目名の組の指示ベクトル(D,)。名前が基礎科目ならその次元、開いた小計なら配下の基礎科目。
+
+    ステージ39 で有形固定資産・投資その他の資産を小計として開いたため、それらを参照する制約
+    (事業継続の β、控除後の純額)を基礎科目の和で表す。重なりは 1 回だけ数える。
+    """
+    idx = {n: i for i, n in enumerate(names)}
+    members = subtotal_members(spec, names)
+    v = np.zeros(len(names))
+    for a in accounts:
+        if a in idx:
+            v[idx[a]] = 1.0
+        elif a in members:
+            v = np.maximum(v, members[a])
+        else:
+            raise KeyError(f"基礎科目にも小計にもない科目: {a}")
+    return v
+
+
+def residual_nonneg_accounts(names: tuple[str, ...]) -> tuple[str, ...]:
+    """下限を課す残余科目。固定の 8 個に、開いた小計の残余(ステージ39)を加える。"""
+    extra = tuple(n for n in names if n in _EXPANDED_RESIDUALS)
+    return (*[n for n in RESIDUAL_NONNEG_ACCOUNTS if n in names], *extra)
 
 
 _RETAINED_EARNINGS = "jppfs_cor_RetainedEarnings"
@@ -282,7 +327,7 @@ def build_linear_constraints(
             x0 = float(x_start[idx[nm]])
             out.append(LinearConstraint(f"{nm}>={alpha:g}*start", a, alpha * x0 if x0 >= 0 else x0))
     if cfg.residual_nonneg:
-        for nm in RESIDUAL_NONNEG_ACCOUNTS:
+        for nm in residual_nonneg_accounts(names):
             a = np.zeros(len(names))
             a[idx[nm]] = 1.0
             bound = RESIDUAL_FLOOR * float(members["jppfs_cor_Assets"] @ x_start)
@@ -298,15 +343,12 @@ def build_linear_constraints(
             out.append(LinearConstraint(f"residual:{nm[9:]}", a, bound))
     if cfg.contra_net_nonneg:
         for cname, members_c in NET_OF_CONTRA.items():
-            a = np.zeros(len(names))
-            for nm in members_c:
-                a[idx[nm]] = 1.0
+            a = account_indicator(spec, names, members_c)
             out.append(LinearConstraint(f"{cname}>=0", a, min(0.0, float(a @ x_start))))
     if cfg.retention_beta is not None and cfg.retention_beta > 0:
         for nm in RETENTION_ACCOUNTS:
-            a = np.zeros(len(names))
-            a[idx[nm]] = 1.0
-            x0 = float(x_start[idx[nm]])
+            a = account_indicator(spec, names, (nm,))
+            x0 = float(a @ x_start)
             beta = cfg.retention_beta
             out.append(LinearConstraint(f"retention:{nm}>={beta:g}*start", a, beta * max(x0, 0.0)))
     if cfg.re_growth_cap is not None:
@@ -411,7 +453,7 @@ def evaluate_extra_checks(
     assets0 = x0 @ m["jppfs_cor_Assets"]
     liab_neg = (x1 @ m["jppfs_cor_Liabilities"]) < -_NA_TOL
     below = np.column_stack([
-        x1[:, idx[n]] / assets0 < RESIDUAL_FLOOR - _NA_TOL for n in RESIDUAL_NONNEG_ACCOUNTS
+        x1[:, idx[n]] / assets0 < RESIDUAL_FLOOR - _NA_TOL for n in residual_nonneg_accounts(names)
     ])
     sign_bad = np.zeros(len(x1), dtype=bool)
     for b in spec.basis:
@@ -422,7 +464,7 @@ def evaluate_extra_checks(
     cash_over = x1[:, idx[_CASH]] > (x1 @ m["jppfs_cor_Assets"]) - RESIDUAL_FLOOR  # 許容=丸め(1e-3)
     net_bad = np.zeros(len(x1), dtype=bool)
     for members_c in NET_OF_CONTRA.values():
-        net_bad |= x1[:, [idx[nm] for nm in members_c]].sum(axis=1) < RESIDUAL_FLOOR - _NA_TOL
+        net_bad |= x1 @ account_indicator(spec, names, members_c) < RESIDUAL_FLOOR - _NA_TOL
     return np.column_stack([liab_neg, below.any(axis=1), cash_over, sign_bad, net_bad])
 
 
@@ -442,6 +484,8 @@ __all__ = [
     "CHECK_NAMES",
     "EXTRA_CHECK_NAMES",
     "RESIDUAL_NONNEG_ACCOUNTS",
+    "account_indicator",
+    "residual_nonneg_accounts",
     "evaluate_extra_checks",
     "check_summary",
     "LinearConstraint",

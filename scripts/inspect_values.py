@@ -109,6 +109,8 @@ class SubtotalAccount:
     element_id: str
     side: str
     ratio: float | None
+    # ステージ39: 開いた小計の親(有形固定資産 → 固定資産 など)。固定の階層にない小計だけに書く
+    parent: str | None = None
 
 
 @dataclass(frozen=True)
@@ -139,6 +141,10 @@ class CanonicalConfig:
 
     def basis_names_for_parent(self, parent_subtotal: str) -> tuple[str, ...]:
         return tuple(b.name for b in self.basis if b.parent_subtotal == parent_subtotal)
+
+    def nested_children(self, subtotal: str) -> tuple[str, ...]:
+        """canonical の ``parent`` で決まる直下の小計(ステージ39)。"""
+        return tuple(s.element_id for s in self.subtotals if s.parent == subtotal)
 
     @property
     def extension_rule(self) -> ExtensionRule | None:
@@ -334,6 +340,18 @@ def _process_company_inner(
         reported = subtotal_facts.get(s.element_id)
         children = _SUBTOTAL_CHILDREN.get(s.element_id, ())
         children_facts = [subtotal_facts.get(c) for c in children]
+        # ステージ39: 開いた小計(有形固定資産など)も直下の小計として差し引く。計算リンクの木に
+        # その小計が無い書類では、その小計の配下の基礎科目(建物などが固定資産の直下に置かれて
+        # いれば、そこに集計されている)の和で代える。0 とみなすと、それらが親の残余と二重に
+        # 数えられる(最初の実装で 9 書類の貸借の残差として見つかった)
+        for c in canonical.nested_children(s.element_id):
+            child_value = subtotal_facts.get(c)
+            if child_value is None and c not in tree.elements:
+                child_value = sum(
+                    values.get(n, 0) for n in canonical.basis_names_for_parent(c)
+                    if n != f"{_OTHER_PREFIX}{c}"
+                )
+            children_facts.append(child_value)
         if reported is None or any(v is None for v in children_facts):
             fallback_subtotals.add(s.element_id)
             continue
