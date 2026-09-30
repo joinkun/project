@@ -161,6 +161,8 @@ def main() -> None:  # noqa: PLR0915
                     help="利益剰余金の増加の上限 γ(総資産比、ステージ27)")
     ap.add_argument("--re-decomp", default="",
                     help="R4 の利益部分の上限 γ のカンマ区切り(ステージ29。空なら作らない)")
+    ap.add_argument("--allow-dropped-sources", action="store_true",
+                    help="不均衡 OT で質量 0 になった訓練始点を許し、学習から除く(ステージ39)")
     ap.add_argument("--k", type=int, default=_K,
                     help="低次元基底の次元(既定13。ステージ17 F: 感度確認用に14を1回試す)")
     args = ap.parse_args()
@@ -221,7 +223,14 @@ def main() -> None:  # noqa: PLR0915
         plan_train, plan_test = plans[f"plan_train_{k}"], plans[f"plan_test_{k}"]
         for plan in (plan_train, plan_test):
             n0, n1 = plan.shape
-            check_plan_health(plan, np.full(n0, 1.0 / n0), None, check_marginals=False)
+            check_plan_health(plan, np.full(n0, 1.0 / n0), None, check_marginals=False,
+                              allow_zero_mass_rows=args.allow_dropped_sources)
+        # ステージ39: 不均衡 OT で質量 0 になった訓練始点は FM の学習から除く(ステージ13 と同じ)。
+        # テストの始点は質量によらず全社を生成する
+        alive = plan_train.sum(axis=1) > 1e-12
+        if not alive.all():
+            print(f"    [{tag}] fold {k}: 質量 0 の訓練始点 {int((~alive).sum())} 社を学習から除く",
+                  flush=True)
         pool_idx = idx0 + [idx2[p] for p in train_pos]
         b = build_reduced_basis(c, x_tilde[pool_idx], k=args.k)
         z0 = x0_tilde @ b
@@ -234,8 +243,8 @@ def main() -> None:  # noqa: PLR0915
             hidden=_HIDDEN,
             n_layers=_N_LAYERS,
         )
-        train_fm(z_train, z0, plan_train, net, epochs=args.epochs, lr=_LR, seed=args.seed,
-                 z_val=z_test, plan_val=plan_test)
+        train_fm(z_train[alive], z0, plan_train[alive], net, epochs=args.epochs, lr=_LR,
+                 seed=args.seed, z_val=z_test, plan_val=plan_test)
         z_start = x2_tilde[test_pos] @ b
         z_path = euler_sample_batch(net, z_start, _TS)
         raw = x2_tilde[test_pos][:, None, :] + np.einsum(

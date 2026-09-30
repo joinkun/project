@@ -86,9 +86,10 @@ def rows_for_version(
     names: tuple[str, ...],
     members: dict[str, np.ndarray],
     clfs: Mapping[str, Any],
+    tag: str = "nearest_na0",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
-    files = sorted(glob.glob(str(directory / version / "nearest_na0__seed*.parquet")))
+    files = sorted(glob.glob(str(directory / version / f"{tag}__seed*.parquet")))
     df = pd.concat([pd.read_parquet(f) for f in files])
     df = select_pcfm(df).reset_index(drop=True)
     x0 = df[[f"x0_{n}" for n in names]].to_numpy()

@@ -73,11 +73,10 @@ RESIDUAL_NONNEG_ACCOUNTS = (
     "__OTHER__jppfs_cor_NetAssets",
     "__OTHER__jppfs_cor_ShareholdersEquity",
 )
-# ステージ39: 開いた小計の残余。実データで下限を満たすことを確かめてから載せる
-_EXPANDED_RESIDUALS = (
-    "__OTHER__jppfs_cor_PropertyPlantAndEquipment",
-    "__OTHER__jppfs_cor_InvestmentsAndOtherAssets",
-)
+# ステージ39: 開いた小計の残余で下限を課すもの。投資その他の資産の残余は実データの最小が 0。
+# 有形固定資産の残余は、減価償却累計額を有形固定資産全体で 1 行に報告する 140 書類で負になる
+# (建物などのグループが総額になり、累計額が残余に入る)ので、下限を課さない
+_EXPANDED_RESIDUALS = ("__OTHER__jppfs_cor_InvestmentsAndOtherAssets",)
 RESIDUAL_LOWER_BOUNDS: dict[str, float] = dict.fromkeys(RESIDUAL_NONNEG_ACCOUNTS, RESIDUAL_FLOOR)
 
 

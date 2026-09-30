@@ -76,6 +76,9 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--exclude", type=Path, default=Path("data/interim/stage28/excluded.csv"))
     ap.add_argument("--class1", type=Path, default=Path("data/interim/stage34/class1_docs.csv"))
     ap.add_argument("--out-dir", type=Path, default=Path("data/interim/stage34/class1"))
+    ap.add_argument("--tag", default="nearest_na0", help="出力ファイル名の設計名(ステージ39)")
+    ap.add_argument("--allow-dropped-sources", action="store_true",
+                    help="不均衡 OT で質量 0 になった class 2 始点を許し、学習から除く(ステージ39)")
     args = ap.parse_args()
     torch.set_num_threads(1)
 
@@ -101,14 +104,16 @@ def main() -> None:  # noqa: PLR0915
     if plan.shape != (len(idx2), len(idx0)):
         raise ValueError(f"輸送計画の形 {plan.shape} が (class 2, class 0) = "
                          f"({len(idx2)}, {len(idx0)}) と合わない")
-    check_plan_health(plan, np.full(len(idx2), 1.0 / len(idx2)), None, check_marginals=False)
+    check_plan_health(plan, np.full(len(idx2), 1.0 / len(idx2)), None, check_marginals=False,
+                      allow_zero_mass_rows=args.allow_dropped_sources)
+    alive = plan.sum(axis=1) > 1e-12  # ステージ39: 質量 0 の class 2 始点は学習から除く
 
     b = build_reduced_basis(c, x_tilde[idx0 + idx2], k=_K)
     z0 = x_tilde[idx0] @ b
     z2 = x_tilde[idx2] @ b
     net = seeded_velocity_field(args.seed * 1000 + _FULL_FOLD, dim=_K, hidden=_HIDDEN,
                                 n_layers=_N_LAYERS)
-    train_fm(z2, z0, plan, net, epochs=_EPOCHS, lr=_LR, seed=args.seed)
+    train_fm(z2[alive], z0, plan[alive], net, epochs=_EPOCHS, lr=_LR, seed=args.seed)
     x1s = x_tilde[idx1]
     z_start = x1s @ b
     z_path = euler_sample_batch(net, z_start, _TS)
@@ -145,11 +150,12 @@ def main() -> None:  # noqa: PLR0915
                 row[f"x1_{n}"] = float(path[-1, k])
             rows.append(row)
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = args.out_dir / f"nearest_na0__seed{args.seed}.parquet"
+    out_path = args.out_dir / f"{args.tag}__seed{args.seed}.parquet"
     pd.DataFrame(rows).to_parquet(out_path, index=False)
     n_inf = sum(1 for r in rows if r["status"] == "infeasible")
     print(f"[class1 seed{args.seed}] 始点 {len(idx1)} 社、学習 class 2 {len(idx2)} 社、"
-          f"実行不可能 {n_inf} 社 → {out_path}", flush=True)
+          f"学習から除いた質量 0 の始点 {int((~alive).sum())} 社、実行不可能 {n_inf} 社 "
+          f"→ {out_path}", flush=True)
 
 
 if __name__ == "__main__":
