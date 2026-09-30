@@ -1,0 +1,62 @@
+{
+  "violations": {
+    "c2_final_eval": 0,
+    "c2_final_all": 2,
+    "c2_prev_eval": 128,
+    "c2_prev_all": 136,
+    "c1_final_eval": 0,
+    "c1_final_all": 0,
+    "c1_prev_eval": 315,
+    "c1_prev_all": 318
+  },
+  "metrics_c2": {
+    "net_asset_improvement": 0.2376158397475831,
+    "abs_asset_change": 0.04515430917358338,
+    "sparsity": 13.0,
+    "validity_lightgbm": 0.9979107165422376,
+    "validity_random_forest": 0.8200000000000001,
+    "validity_logreg": 0.5416579341543215,
+    "proximity_l2": 0.547669359002434,
+    "debt_reduction": 0.10179772878519272,
+    "equity_ratio_change": 0.22971169127475777,
+    "resolved": 8,
+    "insolvent_start": 12,
+    "signed_corr": 0.32492388647396175,
+    "signed_corr_ci": [
+      0.2713202820105936,
+      0.4800796271264325
+    ],
+    "n": 55,
+    "violations": 0
+  },
+  "metrics_c1": {
+    "net_asset_improvement": 0.18866906300539196,
+    "abs_asset_change": 0.04693713938545778,
+    "sparsity": 12.0,
+    "validity_lightgbm": 0.9999998236066561,
+    "validity_random_forest": 0.9733333333333334,
+    "validity_logreg": 0.9773990651809455,
+    "proximity_l2": 0.3112023506985298,
+    "debt_reduction": 0.08358134115627268,
+    "equity_ratio_change": 0.16328637876732438,
+    "resolved": 3,
+    "insolvent_start": 6,
+    "signed_corr": -0.13286775934902384,
+    "signed_corr_ci": [
+      -0.1513085501377305,
+      -0.10680372986020353
+    ],
+    "n": 131,
+    "violations": 0
+  },
+  "real_c2": {
+    "magnitude_rank_corr": 0.8578246133052868,
+    "signed_median_rank_corr": 0.32492388647396175,
+    "re_increase_share": 1.0
+  },
+  "real_c1": {
+    "magnitude_rank_corr": 0.8015046483171082,
+    "signed_median_rank_corr": -0.1134245076865029,
+    "re_increase_share": 1.0
+  }
+}

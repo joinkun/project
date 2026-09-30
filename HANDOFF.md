@@ -1,4 +1,4 @@
-# 引き継ぎ文書(ステージ1〜41)
+# 引き継ぎ文書(ステージ1〜42)
 
 2026-09-28 時点の状態。**ステージ31 で最終設定を確定し、実装を完了とした。** 以降は論文執筆が中心になる。
 ステージ20 以降の各ステージの詳細は `results/stage21`〜`stage31` の `report.md` にある。
@@ -50,13 +50,13 @@ EDINET の有価証券報告書(XBRL)から貸借対照表を集計し、継続�
 - `uv run mypy --strict src scripts tests` と `uv run ruff check .` をクリーンに保つ
   (既存の `pipelines/p03_build_dataset.py` の E501 1 件のみ例外)。
 - 最適化の呼び出しはすべて収束を検査する。未収束は例外(`SolverNotConvergedError`、`InfeasibleProjectionError`)。
-- **15 項目チェックの違反 0 を必須条件とする**(ステージ40 で 14、41 で 15 を追加。15 は不活性制約を採用した場合に意味を持つ。最終設定では 165 行 = 55 社 × 3 seed。ステージ19 までは 204 行 = 68 社 × 3 seed)。
+- **15 項目チェックの違反 0 を必須条件とする**(ステージ40 で 14、41 で 15 を追加。最終設定では 165 行 = 55 社 × 3 seed、class 1 は 393 行 = 131 社 × 3 seed。ステージ19 までは 204 行 = 68 社 × 3 seed)。
 - 評価は企業単位(最終設定では n=55)に集約してから、ペア Wilcoxon 検定とブートストラップ 95% CI(2,000 回)で行う。
   204 行を独立標本として扱わない(擬似反復)。
 - 報告は日本語。**結論が変わることを恐れず、数字を有利に見せない。**「指標が良いこと」と「出力が妥当であること」は別で、BS 表を必ず目で読む。
 - 結果ファイルは `results/stageNN/` に置く。
 
-## 4. 確定した最終設定(ステージ31)
+## 4. 確定した最終設定(ステージ31、ステージ41・42 で不活性制約を追加)
 
 | 要素 | 設定 |
 |---|---|
@@ -67,13 +67,16 @@ EDINET の有価証券報告書(XBRL)から貸借対照表を集計し、継続�
 | 射影の重み | **W1** |
 | 利益剰余金 | **R3 + 上限**: 固定せず、RE(1) − RE(0) ≤ **γ·A0、γ = 0.757**(`--freeze no_re --re-cap 0.7565…`)。その他有価証券評価差額金・非支配株主持分は固定 |
 | 第 2 層の制約 | 小計の非負、純資産の非悪化、残余科目の下限、控除後純額の非負、**α=0.5**、**β=0.3** |
+| 不活性制約 | **始点で 0 の 4 科目(売上債権、固定資産その他、自己株式、評価・換算差額等その他)を経路上で固定**(規則 M、ステージ41・42。`INACTIVE_ACCOUNTS`、`--inactive selected`)。0 → 非0 だけを禁じ、非0 → 0 は禁じない |
 | 時間軸 | t∈[0,1] は 5 年(中小企業活性化協議会の「5 年以内の債務超過解消」。**原典は未確認**、ステージ31) |
 | 主指標 | 純資産の改善、債務超過の解消(改善)。\|総資産変化\|、sparsity(実行可能性) |
 | 副指標 | validity(**勘定振替にも反応する限界あり**、ステージ29)、proximity。参考: 識別 AUC |
 | 感度分析 | R1(利益剰余金を固定) |
 
-主な数値(55 社、`results/stage31/report.md`): 違反 0、純資産の改善 0.233(R1 0.000)、債務超過の解消 8/12 社
-(R1 2/12)、\|総資産変化\| 0.044(R1 0.115)、validity LightGBM 0.998(R1 0.872)、proximity 0.547(R1 0.248)。
+主な数値(`results/stage42/final.md`、最終設定): **class 2(55 社)** 違反 0、純資産の改善 0.238、債務超過の解消 8/12 社、
+\|総資産変化\| 0.045、sparsity 13、validity LightGBM 0.998、proximity 0.548、符号付き順位相関 +0.325。
+**class 1(131 社)** 違反 0、純資産の改善 0.189、解消 3/6、\|総資産変化\| 0.047、sparsity 12、proximity 0.311、順位相関 −0.133。
+不活性制約なしの従来(ステージ31): class 2 で純資産の改善 0.233、\|総資産変化\| 0.044(R1: 0.000・0.115)。
 23/57 社が上限 γ に達する。
 
 **主設定の根拠(ステージ30・31)**: 2022 年度に GC 注記があり 2024 年度に外れた企業(再建群 15 社)の 87% で
@@ -92,8 +95,10 @@ EDINET の有価証券報告書(XBRL)から貸借対照表を集計し、継続�
 許容はすべて総資産比の絶対量。丸めとソルバ精度の許容は `_ROUND_TOL = 1e-3`。
 チェック 5 は終点の負債 > 総資産(0) の 1% の場合に限る(ステージ19)。
 `evaluate_checks`(1〜8)と `evaluate_extra_checks`(9〜15)に分かれている。
-15 は `INACTIVE_ACCOUNTS`(実データで選んだ 17 科目)のうち始点で |x|/A < 1e-6 の科目が 1e-6 を超えて動いたら違反。
-**現行の最終設定(不活性制約なし)は 15 に掛かる**(class 2 162 / 165 行)。採否は保留中(ステージ41)。
+15 は `INACTIVE_ACCOUNTS`(規則 M の 4 科目)のうち始点で |x|/A < 1e-6 の科目が 1e-6 を超えて動いたら違反。
+**不活性制約なしの従来の最終設定は 15 に掛かる**(class 2 128 / 165 行、class 1 315 / 393 行。規則 S の 17 科目で数えると
+class 2 162 / 165 行)。自己株式を持たない苦境企業の 80〜95% に自己株式が生じていた(実データ 78 組中 0)。
+符号制約では検出できない(自己株式は負で、0 から負は符号として正しい)。論文に書く(ステージ42)。
 14 は canonical に依存しない: 状態ベクトルの全残余(`RESIDUAL_SIGN_FREE` = 評価・換算差額等の残余を除く)が
 min(−1e-3 × 総資産(始点), 始点の値) を下回れば違反。10 は固定の 8 個(core では 14 と同じ科目)。
 下限の制約(`residual_nonneg_accounts`)も同じ規則で、新しい残余は既定で下限の対象になる。
@@ -131,7 +136,8 @@ min(−1e-3 × 総資産(始点), 始点の値) を下回れば違反。10 は�
 | 38 | 遷移を T1(class 2 → 1)・T2(class 1 → 0)に分割、重みを射影・速度場にも作用させた(持続性ベース)。T2 は向きの負の相関を解消(−0.11 → +0.04)したが違反 5 社、連結は違反多数。**段階分割も作用点の拡大も不採用**。数値条件(最適性・勾配)は問題なし。ステージ37 は未実施 |
 | 39 | 有形固定資産・投資その他の資産を開いた細分化(D = 38)と OT の再評価(`results/stage39/report.md`)。細分化は class 2 で \|総資産変化\| が悪化し**不採用**。不均衡 OT は純資産の改善が大きいが \|総資産変化\| が悪化し違反も出て**不採用**。持続性の重みは細分化の空間の最近傍では両 class で勝つが、細分化が不採用なので最終設定は**変えない**。細分化の生成は有形固定資産の残余を負にして土地などを作る(34〜54% の行) |
 | 40 | 【canonical の最終試行】残余に下限を課した細分化(チェック 14 を追加)。14 項目の違反 0 だが、class 2 で \|総資産変化\| が悪化し(+0.014・+0.018)class 1 でのみ勝つ。**停止規則により細分化を不採用で確定、canonical の探索を終了**。下限を課しても土地の出現(46 / 99)は減らない(`results/stage40/report.md`) |
-| 41 | 不活性制約(始点で 0 の科目を固定)。実データで苦境企業の自己株式の新規計上は 0 / 78。17 科目に課すと、自己株式 80〜95% → 0%、評価・換算差額等その他 85〜98% → 0% など科目別には実データに近づき、主指標の悪化なし、違反 0。ただし事前に決めた指標(企業ごとの出現数の乖離)は下がらず、**事前の基準では不採用、採否は保留**(`results/stage41/report.md`)。ステージ40 の出現の集計の誤り(符号が自由な科目の負を数えていなかった)を訂正 |
+| 41 | 不活性制約(始点で 0 の科目を固定)。実データで苦境企業の自己株式の新規計上は 0 / 78。17 科目に課すと、自己株式 80〜95% → 0%、評価・換算差額等その他 85〜98% → 0% など科目別には実データに近づき、主指標の悪化なし、違反 0。ただし事前に決めた指標(企業ごとの出現数の乖離)は下がらず、事前の指標は不適切と判断し(科目別の割合で判定)、**規則 M(4 科目)を採用**(`results/stage41/report.md`)。ステージ40 の出現の集計の誤り(符号が自由な科目の負を数えていなかった)を訂正 |
+| 42 | 確定した最終設定(不活性制約 規則 M を含む)で全指標を再計算(`results/stage42/`)。15 項目の違反 0(class 2・1)、主指標は従来とほぼ同じ(純資産の改善 +0.002)。中間報告 第 4 版用 |
 
 ## 7. 却下した設計と理由
 
@@ -186,8 +192,9 @@ min(−1e-3 × 総資産(始点), 始点の値) を下回れば違反。10 は�
 - 生成は始点で 0 の科目を作る(自己株式 0 → 負が 79〜95%、実データ 0〜7%。class 1 の有形固定資産 0 → 正が 81%)。
   細分化では土地・建物・機械を同じ向きに動かし、実データの「土地を保持して設備を減らす」を再現しない(ステージ40)。
 
-- 自己株式は少額の保有からも膨らむ(始点が総資産比 1e-6〜1e-3 の行の 67〜90% が 1e-3 超へ。実データの 1 年は 12%)。
-  不活性制約(厳密な 0 のみ)では止まらない(ステージ41)。
+- **少額からの膨張(今は対処しない)**: 不活性制約は始点が 0 の企業にしか効かない。自己株式などは少額の保有からも
+  膨らむ(始点が総資産比 1e-6〜1e-3 の行の 67〜90% が 1e-3 超へ。実データの 1 年は 12%)。対処には倍率制限が要るが、
+  制約を増やし続けないため保留(ステージ41・42)。
 
 ## 9. 今後の課題(実装しない。論文に書く)
 
@@ -220,21 +227,25 @@ min(−1e-3 × 総資産(始点), 始点の値) を下回れば違反。10 は�
 - `src/fsgen/evaluation/classifiers.py`: validity 用の 3 分類器(LogReg は `StandardScaler` 込み)
 - `src/fsgen/models/transport.py`、`cost.py`、`industry.py`: 輸送・コスト・業種
 
-最終設定(ステージ31)の再現:
+最終設定(ステージ42。ステージ31 の設定 + 不活性制約)の再現:
 
 ```bash
 uv run python scripts/precompute_stage13_transport.py --designs nearest_na0 --costs conf/accounts/costs_equal.yaml \
     --exclude data/interim/stage28/excluded.csv --out-dir data/interim/stage28/plans_equal
-for s in 0 1 2; do uv run python scripts/run_generation_stage16.py --tag nearest_na0 \
-    --plans data/interim/stage28/plans_equal/plans_nearest_na0.npz --seed $s \
-    --configs W1_S5_a05_b03_re0.756519 --re-cap 0.7565192502545388 --freeze no_re \
-    --costs conf/accounts/costs_equal.yaml --exclude data/interim/stage28/excluded.csv \
-    --out-dir data/interim/stage31/r3_cap076; done
-uv run python scripts/run_stage25.py --dir data/interim/stage31 --out results/stage31/metrics \
-    --versions r1,...,r3_cap076 --base r1 --exclude data/interim/stage28/excluded.csv
-uv run python scripts/evaluate_stage31.py
-uv run python scripts/render_bs_stage29.py --dir data/interim/stage31 --out results/stage31/bs --versions r3_cap076,r1
+for s in 0 1 2; do
+  bash scripts/gen_stage39.sh "$PWD" c2 data/interim/stage28/plans_equal conf/accounts/costs_equal.yaml \
+      final nearest_na0 $s data/interim/stage42 selected   # class 2(run_generation_stage16.py --inactive selected)
+  bash scripts/gen_stage39.sh "$PWD" c1 data/interim/stage28/plans_equal conf/accounts/costs_equal.yaml \
+      final nearest_na0 $s data/interim/stage42 selected   # class 1(run_generation_stage34.py --inactive selected)
+done   # 比較用の従来設定は setting=prev、最後の引数 none
+uv run python scripts/metrics_stage39.py --gen-dir data/interim/stage42/gen --out data/interim/stage42/metrics
+uv run python scripts/evaluate_stage42.py
+uv run python scripts/bs_stage39.py --gen-dir data/interim/stage42/gen/c2 --settings final,prev --out results/stage42/bs.md
 ```
+
+`gen_stage39.sh` の中身は `run_generation_stage16.py --configs W1_S5_a05_b03_re0.756519 --re-cap 0.7565192502545388
+--freeze no_re --inactive selected`(class 2)と `run_generation_stage34.py --inactive selected`(class 1)。
+ステージ31 の評価スクリプト(`run_stage25.py`、`evaluate_stage31.py`、`render_bs_stage29.py`)は不活性制約なしの出力用。
 
 除外リストは `extract_business_stage28.py` → `special_industry_stage28.py`、基準は `criteria_stage31.py`
 (入力はステージ30 の `transitions_stage30.py` → `recovery_stage30.py`)。

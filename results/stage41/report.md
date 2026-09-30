@@ -171,3 +171,14 @@ bash scripts/gen_stage39.sh "$PWD" <c2|c1> data/interim/stage39/core/plans_equal
 uv run python scripts/metrics_stage39.py --gen-dir data/interim/stage41/gen --out data/interim/stage41/metrics
 uv run python scripts/compare_stage41.py
 ```
+
+## 判定(ステージ42 の指示で確定)
+
+- 基準 2 は「科目別の割合が実データに近づくか」で判定する(dev は、どの科目が出現したかを見ないため指標として不適切)。
+  科目別の割合は 0.131 → 0.043(class 2、2 年の実データに対して)と改善し、基準 2 を満たす。基準 1・3 も満たすので、
+  **不活性制約を採用する**。
+- 対象は**規則 M(4 科目: 売上債権、固定資産その他、自己株式、評価・換算差額等その他)**。規則 S の 5% 閾値は、1 年と
+  5 年の期間の換算を考慮していなかった(1 年 5% は 5 年で約 23%)。社債は規則 M に含まれないので課さない(確認済み)。
+- これに合わせ、`INACTIVE_ACCOUNTS` とチェック 15 は規則 M の 4 科目に変わった。上の本文のチェック 15 の数値
+  (設定 1 の 162 / 165 行など)は、規則 S の 17 科目で数えたもの。規則 M では 128 / 165 行(class 2)、315 / 393 行(class 1)。
+- 最終設定の数値は `results/stage42/`。

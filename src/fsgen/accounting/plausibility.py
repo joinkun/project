@@ -83,28 +83,17 @@ RESIDUAL_SIGN_FREE = ("__OTHER__jppfs_cor_ValuationAndTranslationAdjustments",)
 _RESIDUAL_PREFIX = "__OTHER__"
 RESIDUAL_LOWER_BOUNDS: dict[str, float] = dict.fromkeys(RESIDUAL_NONNEG_ACCOUNTS, RESIDUAL_FLOOR)
 
-# ステージ41: 不活性制約。始点で 0(|x|/総資産 < INACTIVE_ZERO)の科目を経路上でも始点の値に固定する
-# (0 → 非0 を禁じ、非0 → 0 は禁じない)。対象は実データ(推定用パネル、class 1+2 の 1 年)で
-# 「0 → 非0」が 5% 未満の科目と、5〜20% のうち固定したほうが現行の生成より実データの 5 年換算に
-# 近い科目(`scripts/inactive_select_stage41.py` の規則 S、`results/stage41/selection.md`)
+# ステージ41・42: 不活性制約(最終設定)。始点で 0(|x|/総資産 < INACTIVE_ZERO)の科目を
+# 経路上でも始点の値に固定する(0 → 非0 を禁じ、非0 → 0 は禁じない)。対象は規則 M
+# (`scripts/inactive_select_stage41.py`): 実データ(推定用パネル、class 1+2 の 1 年)の割合 r の
+# 5 年換算 1 − (1 − r)^5 が、不活性制約なしの生成の割合の半分未満の科目(固定したほうが実データに
+# 近い)。規則 S(5% 閾値、17 科目)は、1 年と 5 年の期間の違いを考慮していないため採らなかった
+# (`results/stage41/report.md`、ステージ41 の判定)
 INACTIVE_ZERO = 1e-6
 INACTIVE_ACCOUNTS = (
-    "__OTHER__jppfs_cor_Assets",
     "receivables_trade",
-    "allowance_doubtful_current",
-    "__OTHER__jppfs_cor_CurrentAssets",
-    "allowance_doubtful_noncurrent",
     "__OTHER__jppfs_cor_NoncurrentAssets",
-    "payables_trade",
-    "accounts_payable_other",
-    "bonds_current",
-    "__OTHER__jppfs_cor_Liabilities",
-    "bonds_noncurrent",
-    "non_controlling_interests",
-    "__OTHER__jppfs_cor_NetAssets",
     "jppfs_cor_TreasuryStock",
-    "__OTHER__jppfs_cor_ShareholdersEquity",
-    "valuation_difference_securities",
     "__OTHER__jppfs_cor_ValuationAndTranslationAdjustments",
 )
 
@@ -501,7 +490,7 @@ def evaluate_extra_checks(
     (許容は丸め1e-3)。11の許容も丸め1e-3(総資産直下の残余の下限と同じ)。
     14(ステージ40): canonical によらない残余の下限。状態ベクトルの全残余(RESIDUAL_SIGN_FREE を
     除く)のいずれかが min(下限, 始点の値) を下回る。core(32)では 10 と同じ 8 個を見る。
-    15(ステージ41): 不活性科目(INACTIVE_ACCOUNTS のうち始点で |x|/総資産 < INACTIVE_ZERO)が
+    15(ステージ41・42): 不活性科目(INACTIVE_ACCOUNTS のうち始点で |x|/総資産 < INACTIVE_ZERO)が
     始点の値から総資産比 1e-6 を超えて動いた。制約(始点の値に固定)と同じ定義。
     """
     m = subtotal_members(spec, names)
