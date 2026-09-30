@@ -40,11 +40,13 @@ from fsgen.accounting.constraints import (  # noqa: E402
     state_vector_names,
 )
 from fsgen.accounting.plausibility import (  # noqa: E402
+    INACTIVE_ACCOUNTS,
     ConstraintLayers,
     PlausibilityConfig,
     apply_layers,
     build_linear_constraints,
     decompose_re_change,
+    inactive_accounts,
     load_constraint_layers,
     re_decomposition_branches,
 )
@@ -86,6 +88,25 @@ _HIDDEN = 128
 _N_LAYERS = 3
 _DELTA = 1e-3
 
+
+
+def inactive_targets(arg: str, names: tuple[str, ...]) -> tuple[str, ...]:
+    """``--inactive`` の値 → 不活性制約の対象科目(ステージ41)。
+
+    none: なし、selected: INACTIVE_ACCOUNTS(実データで選んだ科目)、all: 全基礎科目、
+    それ以外: カンマ区切りの科目名。
+    """
+    if arg == "none":
+        return ()
+    if arg == "selected":
+        return INACTIVE_ACCOUNTS
+    if arg == "all":
+        return names
+    accs = tuple(a for a in arg.split(",") if a)
+    unknown = sorted(set(accs) - set(names))
+    if unknown:
+        raise ValueError(f"基礎科目にない科目: {unknown}")
+    return accs
 
 def make_configs(
     layers: ConstraintLayers | None = None,
@@ -161,6 +182,8 @@ def main() -> None:  # noqa: PLR0915
                     help="利益剰余金の増加の上限 γ(総資産比、ステージ27)")
     ap.add_argument("--re-decomp", default="",
                     help="R4 の利益部分の上限 γ のカンマ区切り(ステージ29。空なら作らない)")
+    ap.add_argument("--inactive", default="none",
+                    help="不活性制約: none / selected / all / カンマ区切りの科目(ステージ41)")
     ap.add_argument("--allow-dropped-sources", action="store_true",
                     help="不均衡 OT で質量 0 になった訓練始点を許し、学習から除く(ステージ39)")
     ap.add_argument("--k", type=int, default=_K,
@@ -178,6 +201,7 @@ def main() -> None:  # noqa: PLR0915
     if args.freeze == "no_re":
         frozen = tuple(n for n in frozen if n != "jppfs_cor_RetainedEarnings")
     dim = len(names)
+    targets = inactive_targets(args.inactive, names)
     w1 = (np.ones(dim), np.ones(dim))
     w3 = cost_vectors(cost_config, names, non_actionable_mode="keep")
     weights_by_cond = {"W1": w1, "W3": w3}
@@ -203,14 +227,14 @@ def main() -> None:  # noqa: PLR0915
     rows: list[dict[str, float | int | str]] = []
 
     def add(config: str, method: str, k: int, p: int, path: np.ndarray, status: str,
-            active: str, re_branch: int = -1) -> None:
+            active: str, re_branch: int = -1, n_inactive: int = 0) -> None:
         # ステージ29: RE の変化の分解(振替・利益部分、総資産(0)比)。出力の状態ベクトルには含めない
         transfer, profit = decompose_re_change(path[0], path[-1], names)
         row: dict[str, float | int | str] = {
             "tag": args.tag, "config": config, "seed": args.seed, "fold": k, "method": method,
             "docID": doc2[p], "filerName": name2[p], "assets_start": float(assets[idx2[p]]),
             "status": status, "active": active, "re_branch": re_branch,
-            "re_transfer": float(transfer), "re_profit": float(profit),
+            "re_transfer": float(transfer), "re_profit": float(profit), "n_inactive": n_inactive,
         }
         for j, name in enumerate(names):
             row[f"x0_{name}"] = float(path[0, j])
@@ -253,6 +277,9 @@ def main() -> None:  # noqa: PLR0915
         for i_local, p in enumerate(test_pos):
             x_start = x2_tilde[p]
             add("raw", "FM", k, int(p), raw[i_local], "ok", "")
+            # ステージ41: 始点で 0 の対象科目を経路上でも始点の値に固定する(不活性制約)
+            inactive = inactive_accounts(x_start, names, targets)
+            frozen_i = frozen + tuple(a for a in inactive if a not in frozen)
             for cname, (cond, cfg) in configs.items():
                 wp, wm = weights_by_cond[cond]
                 weights = combined_projection_weights(x_start, 1.0, wp, wm, _DELTA)
@@ -269,20 +296,20 @@ def main() -> None:  # noqa: PLR0915
                         if branches is None:
                             out[t_i], info = project_onto_feasible(
                                 raw[i_local][t_i], spec, x_start=x_start, weights=weights,
-                                direction_constraints=dcs, frozen_accounts=frozen,
+                                direction_constraints=dcs, frozen_accounts=frozen_i,
                                 extra_constraints=extra,
                             )
                         else:  # R4: 2 つの分岐の和集合への射影(近い方の分岐を採る)
                             out[t_i], info, branch = project_onto_union(
                                 raw[i_local][t_i], spec, x_start, branches, weights=weights,
                                 extra_constraints=extra, direction_constraints=dcs,
-                                frozen_accounts=frozen,
+                                frozen_accounts=frozen_i,
                             )
                     active = ";".join(info.active_constraints)
                 except InfeasibleProjectionError:
                     out = np.repeat(x_start[None, :], out.shape[0], axis=0)  # 動かせない
                     status = "infeasible"
-                add(cname, "PCFM", k, int(p), out, status, active, branch)
+                add(cname, "PCFM", k, int(p), out, status, active, branch, len(inactive))
         print(f"  [{tag}] fold {k + 1}/{args.n_folds} 完了({time.perf_counter() - t0:.0f}s)",
               flush=True)
 

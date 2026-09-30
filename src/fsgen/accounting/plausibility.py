@@ -83,6 +83,45 @@ RESIDUAL_SIGN_FREE = ("__OTHER__jppfs_cor_ValuationAndTranslationAdjustments",)
 _RESIDUAL_PREFIX = "__OTHER__"
 RESIDUAL_LOWER_BOUNDS: dict[str, float] = dict.fromkeys(RESIDUAL_NONNEG_ACCOUNTS, RESIDUAL_FLOOR)
 
+# ステージ41: 不活性制約。始点で 0(|x|/総資産 < INACTIVE_ZERO)の科目を経路上でも始点の値に固定する
+# (0 → 非0 を禁じ、非0 → 0 は禁じない)。対象は実データ(推定用パネル、class 1+2 の 1 年)で
+# 「0 → 非0」が 5% 未満の科目と、5〜20% のうち固定したほうが現行の生成より実データの 5 年換算に
+# 近い科目(`scripts/inactive_select_stage41.py` の規則 S、`results/stage41/selection.md`)
+INACTIVE_ZERO = 1e-6
+INACTIVE_ACCOUNTS = (
+    "__OTHER__jppfs_cor_Assets",
+    "receivables_trade",
+    "allowance_doubtful_current",
+    "__OTHER__jppfs_cor_CurrentAssets",
+    "allowance_doubtful_noncurrent",
+    "__OTHER__jppfs_cor_NoncurrentAssets",
+    "payables_trade",
+    "accounts_payable_other",
+    "bonds_current",
+    "__OTHER__jppfs_cor_Liabilities",
+    "bonds_noncurrent",
+    "non_controlling_interests",
+    "__OTHER__jppfs_cor_NetAssets",
+    "jppfs_cor_TreasuryStock",
+    "__OTHER__jppfs_cor_ShareholdersEquity",
+    "valuation_difference_securities",
+    "__OTHER__jppfs_cor_ValuationAndTranslationAdjustments",
+)
+
+
+def inactive_accounts(
+    x_start: np.ndarray, names: tuple[str, ...], accounts: tuple[str, ...] = INACTIVE_ACCOUNTS,
+    assets: float | None = None,
+) -> tuple[str, ...]:
+    """始点で 0 の対象科目(企業ごとの不活性科目)。
+
+    ``assets`` は始点の総資産(既定は tilde 空間の 1)。
+    """
+    scale = 1.0 if assets is None else abs(float(assets))
+    idx = {n: i for i, n in enumerate(names)}
+    return tuple(a for a in accounts
+                 if a in idx and abs(float(x_start[idx[a]])) < INACTIVE_ZERO * scale)
+
 
 def subtotal_members(spec: CanonicalSpec, names: tuple[str, ...]) -> dict[str, np.ndarray]:
     """小計・総合計 → 配下の基礎科目の指示ベクトル(D,)。"""
@@ -446,7 +485,7 @@ def evaluate_checks(
 
 EXTRA_CHECK_NAMES = (
     "9_総負債が負", "10_残余科目が負", "11_現金>総資産", "12_基礎科目の符号違反",
-    "13_控除後の純額が負", "14_残余科目が下限未満",
+    "13_控除後の純額が負", "14_残余科目が下限未満", "15_不活性科目が動いた",
 )
 _SIGN_TOL = 1e-6  # 基礎科目の符号違反の許容(tilde空間=総資産比)
 
@@ -462,6 +501,8 @@ def evaluate_extra_checks(
     (許容は丸め1e-3)。11の許容も丸め1e-3(総資産直下の残余の下限と同じ)。
     14(ステージ40): canonical によらない残余の下限。状態ベクトルの全残余(RESIDUAL_SIGN_FREE を
     除く)のいずれかが min(下限, 始点の値) を下回る。core(32)では 10 と同じ 8 個を見る。
+    15(ステージ41): 不活性科目(INACTIVE_ACCOUNTS のうち始点で |x|/総資産 < INACTIVE_ZERO)が
+    始点の値から総資産比 1e-6 を超えて動いた。制約(始点の値に固定)と同じ定義。
     """
     m = subtotal_members(spec, names)
     idx = {n: i for i, n in enumerate(names)}
@@ -486,8 +527,13 @@ def evaluate_extra_checks(
     net_bad = np.zeros(len(x1), dtype=bool)
     for members_c in NET_OF_CONTRA.values():
         net_bad |= x1 @ account_indicator(spec, names, members_c) < RESIDUAL_FLOOR - _NA_TOL
+    moved = np.zeros(len(x1), dtype=bool)
+    for a in INACTIVE_ACCOUNTS:
+        if a in idx:
+            zero = np.abs(x0[:, idx[a]]) < INACTIVE_ZERO * np.abs(assets0)
+            moved |= zero & (np.abs(x1[:, idx[a]] - x0[:, idx[a]]) > _SIGN_TOL * np.abs(assets0))
     return np.column_stack([liab_neg, below.any(axis=1), cash_over, sign_bad, net_bad,
-                            below_all.any(axis=1)])
+                            below_all.any(axis=1), moved])
 
 
 def check_summary(flags: np.ndarray, doc_ids: list[str]) -> list[dict[str, object]]:
@@ -507,6 +553,9 @@ __all__ = [
     "EXTRA_CHECK_NAMES",
     "RESIDUAL_NONNEG_ACCOUNTS",
     "RESIDUAL_SIGN_FREE",
+    "INACTIVE_ACCOUNTS",
+    "INACTIVE_ZERO",
+    "inactive_accounts",
     "account_indicator",
     "residual_nonneg_accounts",
     "evaluate_extra_checks",

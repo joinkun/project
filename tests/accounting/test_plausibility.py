@@ -413,3 +413,30 @@ def test_start_below_residual_floor_is_relaxed_not_raised() -> None:
     y[_EXP_IDX[_PPE_OTHER]] -= 0.01
     y[_EXP_IDX["land"]] += 0.01
     assert evaluate_extra_checks(y[None, :], x0[None, :], _EXP, _EXP_NAMES)[0, 5]
+
+
+# ---- ステージ41: 不活性制約(チェック 15)----
+
+
+def test_inactive_accounts_are_zero_start_targets() -> None:
+    from fsgen.accounting.plausibility import INACTIVE_ACCOUNTS, inactive_accounts
+    x0 = _start()
+    acc = inactive_accounts(x0, _NAMES)
+    assert "jppfs_cor_TreasuryStock" in acc
+    assert set(acc) <= set(INACTIVE_ACCOUNTS)
+    x0[_IDX["jppfs_cor_TreasuryStock"]] = -0.01  # 保有していれば対象外(非0 → 0 は禁じない)
+    assert "jppfs_cor_TreasuryStock" not in inactive_accounts(x0, _NAMES)
+
+
+def test_check15_flags_emerging_treasury_stock_and_projection_prevents_it() -> None:
+    from fsgen.accounting.plausibility import inactive_accounts
+    x0 = _start()
+    y = x0.copy()
+    y[_IDX["jppfs_cor_TreasuryStock"]] = -0.05  # 自社株買い(0 → 非0)
+    y[_IDX["jppfs_cor_CashAndDeposits"]] -= 0.05
+    assert evaluate_extra_checks(y[None, :], x0[None, :], _SPEC, _NAMES)[0, 6]
+    assert not evaluate_extra_checks(x0[None, :], x0[None, :], _SPEC, _NAMES)[0, 6]
+    x, _ = project_onto_feasible(y, _SPEC, x_start=x0,
+                                 frozen_accounts=inactive_accounts(x0, _NAMES))
+    assert abs(x[_IDX["jppfs_cor_TreasuryStock"]]) < 1e-9
+    assert not evaluate_extra_checks(x[None, :], x0[None, :], _SPEC, _NAMES)[0, 6]

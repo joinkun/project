@@ -33,6 +33,7 @@ from run_generation_stage16 import (  # noqa: E402
     _LR,
     _N_LAYERS,
     _TS,
+    inactive_targets,
     load_dataset,
     make_configs,
 )
@@ -46,6 +47,7 @@ from fsgen.accounting.plausibility import (  # noqa: E402
     ConstraintLayers,
     build_linear_constraints,
     decompose_re_change,
+    inactive_accounts,
 )
 from fsgen.accounting.projection_qp import (  # noqa: E402
     load_direction_constraints,
@@ -77,6 +79,8 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--class1", type=Path, default=Path("data/interim/stage34/class1_docs.csv"))
     ap.add_argument("--out-dir", type=Path, default=Path("data/interim/stage34/class1"))
     ap.add_argument("--tag", default="nearest_na0", help="出力ファイル名の設計名(ステージ39)")
+    ap.add_argument("--inactive", default="none",
+                    help="不活性制約: none / selected / all / カンマ区切りの科目(ステージ41)")
     ap.add_argument("--allow-dropped-sources", action="store_true",
                     help="不均衡 OT で質量 0 になった class 2 始点を許し、学習から除く(ステージ39)")
     args = ap.parse_args()
@@ -89,6 +93,7 @@ def main() -> None:  # noqa: PLR0915
     frozen = tuple(n for n in load_cost_config(args.costs).non_actionable
                    if n != "jppfs_cor_RetainedEarnings")  # R3
     dim = len(names)
+    targets = inactive_targets(args.inactive, names)
     _cond, cfg = make_configs(ConstraintLayers(), _GAMMA)[_CONFIG]
 
     doc_ids, filer, x, assets, labels, _keep = load_dataset(
@@ -123,6 +128,8 @@ def main() -> None:  # noqa: PLR0915
     rows: list[dict[str, float | int | str]] = []
     for j, i in enumerate(idx1):
         x_start = x_tilde[i]
+        inactive = inactive_accounts(x_start, names, targets)  # ステージ41
+        frozen_i = frozen + tuple(a for a in inactive if a not in frozen)
         weights = combined_projection_weights(x_start, 1.0, ones, ones, _DELTA)
         extra = build_linear_constraints(spec, names, x_start, cfg)
         out = raw[j].copy()
@@ -131,7 +138,7 @@ def main() -> None:  # noqa: PLR0915
             for t_i in range(out.shape[0]):
                 out[t_i], info = project_onto_feasible(
                     raw[j][t_i], spec, x_start=x_start, weights=weights,
-                    direction_constraints=dcs, frozen_accounts=frozen, extra_constraints=extra)
+                    direction_constraints=dcs, frozen_accounts=frozen_i, extra_constraints=extra)
             active = ";".join(info.active_constraints)
         except InfeasibleProjectionError:
             out = np.repeat(x_start[None, :], out.shape[0], axis=0)
@@ -144,6 +151,7 @@ def main() -> None:  # noqa: PLR0915
                 "assets_start": float(assets[i]), "status": status if method == "PCFM" else "ok",
                 "active": active if method == "PCFM" else "", "re_branch": -1,
                 "re_transfer": float(transfer), "re_profit": float(profit),
+                "n_inactive": len(inactive),
             }
             for k, n in enumerate(names):
                 row[f"x0_{n}"] = float(path[0, k])
