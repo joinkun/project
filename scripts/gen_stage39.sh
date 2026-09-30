@@ -1,12 +1,13 @@
 #!/bin/bash
 # ステージ39: 1 設定 × 1 seed の生成(class 2 は run_generation_stage16、class 1 は run_generation_stage34)
-# 使い方: gen_stage39.sh <root> <class:c2|c1> <plans_dir> <costs> <setting> <design> <seed> [<out_base>]
+# 使い方: gen_stage39.sh <root> <class:c2|c1> <plans_dir> <costs> <setting> <design> <seed> [<out_base>] [<inactive>]
+# inactive は --inactive の値(既定 none。ステージ41)
 # out_base は root からの相対(既定 data/interim/stage39。ステージ40 は data/interim/stage40)
 set -e
-root=$1; cls=$2; plans=$3; costs=$4; setting=$5; design=$6; seed=$7; base=${8:-data/interim/stage39}
+root=$1; cls=$2; plans=$3; costs=$4; setting=$5; design=$6; seed=$7; base=${8:-data/interim/stage39}; inactive=${9:-none}
 cd "$root"
-extra=""
-case "$design" in unb*) extra="--allow-dropped-sources";; esac
+extra="--inactive $inactive"
+case "$design" in unb*) extra="$extra --allow-dropped-sources";; esac
 mkdir -p $base/gen/$cls/$setting $base/logs
 if [ "$cls" = c2 ]; then
   uv run --project /home/yuto/project python /home/yuto/project/scripts/run_generation_stage16.py \

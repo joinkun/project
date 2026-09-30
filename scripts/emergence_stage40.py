@@ -10,7 +10,8 @@
   (生成は 5 年。実データの 1・2 年とは期間が違う)
 
 ``--gen`` は ``名前=ディレクトリ``(``*__seed*.parquet`` の PCFM の行)。負の科目(引当金・自己株式)は
-「0 から負」を数える。
+「0 から負」、符号が自由な科目(残余など)は両方向を数える(ステージ41 で修正)。閾値の既定は 1.001e-3
+(残余の下限 −1e-3 にちょうど張り付いた値を数えない。ステージ41 で修正)。
 
     uv run python scripts/emergence_stage40.py \\
         --gen c2_39=data/interim/stage39/gen/c2/nearest_na0 --out results/stage40/emergence.md
@@ -34,7 +35,7 @@ _ZERO = 1e-9
 def main() -> None:  # noqa: PLR0915
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--gen", nargs="*", default=[])
-    ap.add_argument("--thr", type=float, default=1e-3)
+    ap.add_argument("--thr", type=float, default=1.001e-3)
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
@@ -51,7 +52,11 @@ def main() -> None:  # noqa: PLR0915
     press = p["label_prev"].isin([1, 2]).to_numpy()
 
     def emerged(prev: np.ndarray, cur: np.ndarray, n: str) -> np.ndarray:
-        out: np.ndarray = -cur > args.thr if sign.get(n) == "nonpos" else cur > args.thr
+        # ステージ41 で修正: 符号が自由な科目(残余など)は両方向を数える。以前は正の向きだけで、
+        # 評価・換算差額等その他の 0 → 負(生成の 85〜98%)を見落としていた
+        sg = sign.get(n)
+        out: np.ndarray = (-cur > args.thr if sg == "nonpos" else cur > args.thr if sg == "nonneg"
+                           else np.abs(cur) > args.thr)
         return out
 
     gens = {}
