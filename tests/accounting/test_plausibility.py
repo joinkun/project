@@ -347,3 +347,69 @@ def test_project_onto_union_picks_nearer_branch() -> None:
     x2, _info2, k2 = project_onto_union(y2, spec, x0, branches)
     assert k2 == 0
     assert np.isclose(x2[i_re], x0[i_re], atol=1e-6)
+
+
+# ---- ステージ40: canonical によらない残余の下限(チェック 14)----
+
+_EXP = load_canonical_spec(Path("conf/accounts/core_expanded.yaml"))
+_EXP_NAMES = state_vector_names(_EXP, include_subtotals=False)
+_EXP_IDX = {n: i for i, n in enumerate(_EXP_NAMES)}
+_PPE_OTHER = "__OTHER__jppfs_cor_PropertyPlantAndEquipment"
+
+
+def _expanded_start(ppe_other: float = 0.0) -> np.ndarray:
+    """細分化(D = 38)の貸借が一致する始点(総資産 = 1)。"""
+    x = np.zeros(len(_EXP_NAMES))
+    x[_EXP_IDX["jppfs_cor_CashAndDeposits"]] = 0.5 - ppe_other
+    x[_EXP_IDX["land"]] = 0.3
+    x[_EXP_IDX["buildings_net"]] = 0.2
+    x[_EXP_IDX[_PPE_OTHER]] = ppe_other
+    x[_EXP_IDX["long_term_loans"]] = 0.5
+    x[_EXP_IDX["jppfs_cor_CapitalStock"]] = 0.8
+    x[_EXP_IDX["jppfs_cor_RetainedEarnings"]] = -0.3
+    return x
+
+
+def test_residual_floor_accounts_match_fixed_list_in_core() -> None:
+    from fsgen.accounting.plausibility import RESIDUAL_NONNEG_ACCOUNTS, residual_nonneg_accounts
+    assert residual_nonneg_accounts(_NAMES) == RESIDUAL_NONNEG_ACCOUNTS
+
+
+def test_check14_equals_check10_in_core() -> None:
+    x0 = _start()
+    y = x0.copy()
+    y[_IDX["__OTHER__jppfs_cor_CurrentLiabilities"]] = -0.3
+    y[_IDX["jppfs_cor_CashAndDeposits"]] -= 0.3
+    flags = evaluate_extra_checks(np.stack([x0, y]), np.stack([x0, x0]), _SPEC, _NAMES)
+    assert (flags[:, 1] == flags[:, 5]).all()
+    assert flags[1, 5]
+
+
+def test_expanded_residuals_are_floored_by_default() -> None:
+    from fsgen.accounting.plausibility import RESIDUAL_SIGN_FREE, residual_nonneg_accounts
+    acc = residual_nonneg_accounts(_EXP_NAMES)
+    assert _PPE_OTHER in acc
+    assert "__OTHER__jppfs_cor_InvestmentsAndOtherAssets" in acc
+    assert not set(RESIDUAL_SIGN_FREE) & set(acc)
+
+
+def test_check14_detects_negative_ppe_residual_that_check10_misses() -> None:
+    x0 = _expanded_start()
+    y = x0.copy()
+    y[_EXP_IDX["land"]] += 0.1  # 土地を作り、有形固定資産の残余で相殺する(ステージ39 の壊れ方)
+    y[_EXP_IDX[_PPE_OTHER]] -= 0.1
+    flags = evaluate_extra_checks(y[None, :], x0[None, :], _EXP, _EXP_NAMES)[0]
+    assert flags[5] and not flags[1]
+
+
+def test_start_below_residual_floor_is_relaxed_not_raised() -> None:
+    x0 = _expanded_start(ppe_other=-0.05)  # 減価償却累計額を一括で報告する書類の形
+    extra = build_linear_constraints(_EXP, _EXP_NAMES, x0, PlausibilityConfig(residual_nonneg=True))
+    (c,) = [e for e in extra if e.name == "residual:jppfs_cor_PropertyPlantAndEquipment"]
+    assert c.rhs == pytest.approx(-0.05)
+    same = evaluate_extra_checks(x0[None, :], x0[None, :], _EXP, _EXP_NAMES)[0]
+    assert not same[5]  # 悪化させなければ違反ではない
+    y = x0.copy()
+    y[_EXP_IDX[_PPE_OTHER]] -= 0.01
+    y[_EXP_IDX["land"]] += 0.01
+    assert evaluate_extra_checks(y[None, :], x0[None, :], _EXP, _EXP_NAMES)[0, 5]

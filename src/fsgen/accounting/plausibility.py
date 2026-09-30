@@ -73,10 +73,14 @@ RESIDUAL_NONNEG_ACCOUNTS = (
     "__OTHER__jppfs_cor_NetAssets",
     "__OTHER__jppfs_cor_ShareholdersEquity",
 )
-# ステージ39: 開いた小計の残余で下限を課すもの。投資その他の資産の残余は実データの最小が 0。
-# 有形固定資産の残余は、減価償却累計額を有形固定資産全体で 1 行に報告する 140 書類で負になる
-# (建物などのグループが総額になり、累計額が残余に入る)ので、下限を課さない
-_EXPANDED_RESIDUALS = ("__OTHER__jppfs_cor_InvestmentsAndOtherAssets",)
+# ステージ40: 符号を自由にする残余は、実データでも負になる評価・換算差額等の残余だけ(明示の一覧)。
+# それ以外の残余(``__OTHER__*``)は、canonical によらず既定で下限 RESIDUAL_FLOOR を課す。
+# ステージ39 では開いた小計の残余を一覧に載せる方式(既定で自由)にしたため、有形固定資産の残余が
+# 自由のまま残り、生成で負になって土地・建物を作り出した。有形固定資産の残余が実データで負になる
+# 140 書類は、減価償却累計額を有形固定資産全体で 1 行に報告する書類(調べた 137 書類中 135)で、
+# 丸めではない。そうした始点は始点の値まで下限を緩める(悪化させない)
+RESIDUAL_SIGN_FREE = ("__OTHER__jppfs_cor_ValuationAndTranslationAdjustments",)
+_RESIDUAL_PREFIX = "__OTHER__"
 RESIDUAL_LOWER_BOUNDS: dict[str, float] = dict.fromkeys(RESIDUAL_NONNEG_ACCOUNTS, RESIDUAL_FLOOR)
 
 
@@ -139,8 +143,16 @@ def account_indicator(
 
 
 def residual_nonneg_accounts(names: tuple[str, ...]) -> tuple[str, ...]:
-    """下限を課す残余科目。固定の 8 個に、開いた小計の残余(ステージ39)を加える。"""
-    extra = tuple(n for n in names if n in _EXPANDED_RESIDUALS)
+    """下限を課す残余科目: 状態ベクトルの全残余から RESIDUAL_SIGN_FREE を除いたもの(ステージ40)。
+
+    並びは固定の 8 個(core の順)を先に、それ以外(開いた小計の残余など)を ``names`` の順に。
+    core(32)では固定の 8 個と一致する。
+    """
+    extra = tuple(
+        n for n in names
+        if n.startswith(_RESIDUAL_PREFIX) and n not in RESIDUAL_NONNEG_ACCOUNTS
+        and n not in RESIDUAL_SIGN_FREE
+    )
     return (*[n for n in RESIDUAL_NONNEG_ACCOUNTS if n in names], *extra)
 
 
@@ -331,7 +343,9 @@ def build_linear_constraints(
             a[idx[nm]] = 1.0
             bound = RESIDUAL_FLOOR * float(members["jppfs_cor_Assets"] @ x_start)
             if float(x_start[idx[nm]]) < bound:
-                if not relax_residual_start:
+                # ステージ40: 固定の 8 個以外(開いた小計の残余)は、始点が下限を破っていれば
+                # 始点の値まで緩める(実データの報告形式によるもの。悪化させない)
+                if not relax_residual_start and nm in RESIDUAL_NONNEG_ACCOUNTS:
                     raise ValueError(
                         f"始点が残余科目の下限を破っている: {nm}(canonicalの見直しが必要)"
                     )
@@ -432,7 +446,7 @@ def evaluate_checks(
 
 EXTRA_CHECK_NAMES = (
     "9_総負債が負", "10_残余科目が負", "11_現金>総資産", "12_基礎科目の符号違反",
-    "13_控除後の純額が負",
+    "13_控除後の純額が負", "14_残余科目が下限未満",
 )
 _SIGN_TOL = 1e-6  # 基礎科目の符号違反の許容(tilde空間=総資産比)
 
@@ -440,19 +454,27 @@ _SIGN_TOL = 1e-6  # 基礎科目の符号違反の許容(tilde空間=総資産�
 def evaluate_extra_checks(
     x1: np.ndarray, x0: np.ndarray, spec: CanonicalSpec, names: tuple[str, ...]
 ) -> np.ndarray:
-    """(n, 5)のbool配列。§A.2の8項目では見えない抜け穴(ステージ14〜16で発見)を捉える。
+    """(n, 6)のbool配列。§A.2の8項目では見えない抜け穴(ステージ14〜16・40で発見)を捉える。
 
-    9: 総負債が負。10: 残余科目(RESIDUAL_NONNEG_ACCOUNTS)のいずれかが下限(総資産比-1e-3)を
+    9: 総負債が負。10: 残余科目(固定の RESIDUAL_NONNEG_ACCOUNTS)のいずれかが下限(総資産比-1e-3)を
     下回る。11: 現金が総資産を上回る(ステージ15)。12: 基礎科目の符号違反(nonnegが負、
     nonposが正。許容1e-6×総資産、ステージ16)。13: 控除科目を引いた純額(NET_OF_CONTRA)が負
     (許容は丸め1e-3)。11の許容も丸め1e-3(総資産直下の残余の下限と同じ)。
+    14(ステージ40): canonical によらない残余の下限。状態ベクトルの全残余(RESIDUAL_SIGN_FREE を
+    除く)のいずれかが min(下限, 始点の値) を下回る。core(32)では 10 と同じ 8 個を見る。
     """
     m = subtotal_members(spec, names)
     idx = {n: i for i, n in enumerate(names)}
     assets0 = x0 @ m["jppfs_cor_Assets"]
     liab_neg = (x1 @ m["jppfs_cor_Liabilities"]) < -_NA_TOL
     below = np.column_stack([
-        x1[:, idx[n]] / assets0 < RESIDUAL_FLOOR - _NA_TOL for n in residual_nonneg_accounts(names)
+        x1[:, idx[n]] / assets0 < RESIDUAL_FLOOR - _NA_TOL
+        for n in RESIDUAL_NONNEG_ACCOUNTS if n in idx
+    ])
+    below_all = np.column_stack([
+        x1[:, idx[n]] / assets0
+        < np.minimum(RESIDUAL_FLOOR, x0[:, idx[n]] / assets0) - _NA_TOL
+        for n in residual_nonneg_accounts(names)
     ])
     sign_bad = np.zeros(len(x1), dtype=bool)
     for b in spec.basis:
@@ -464,7 +486,8 @@ def evaluate_extra_checks(
     net_bad = np.zeros(len(x1), dtype=bool)
     for members_c in NET_OF_CONTRA.values():
         net_bad |= x1 @ account_indicator(spec, names, members_c) < RESIDUAL_FLOOR - _NA_TOL
-    return np.column_stack([liab_neg, below.any(axis=1), cash_over, sign_bad, net_bad])
+    return np.column_stack([liab_neg, below.any(axis=1), cash_over, sign_bad, net_bad,
+                            below_all.any(axis=1)])
 
 
 def check_summary(flags: np.ndarray, doc_ids: list[str]) -> list[dict[str, object]]:
@@ -483,6 +506,7 @@ __all__ = [
     "CHECK_NAMES",
     "EXTRA_CHECK_NAMES",
     "RESIDUAL_NONNEG_ACCOUNTS",
+    "RESIDUAL_SIGN_FREE",
     "account_indicator",
     "residual_nonneg_accounts",
     "evaluate_extra_checks",
