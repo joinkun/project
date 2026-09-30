@@ -70,8 +70,12 @@ def train_classifiers(
 ) -> dict[str, _SklearnLikeClassifier]:
     """3種類の分類器をそれぞれ1回学習する(§B.4)。
 
-    x_normalized: (n, D) 総資産で正規化した状態ベクトル(class0+class2全社)。
+    x_normalized: (n, D) 総資産で正規化した状態ベクトル。
     is_class2: (n,) bool、class2ならTrue。
+
+    注意(ステージ34 で判明): これまでの呼び出し側(各スクリプトの ``load_real``)は、ラベルのある
+    書類をすべて渡しており、class 1(重要事象のみ)も「class 2 でない」側に含めて学習している。
+    class 1 を除いて学習し直しても、最終設定の validity LightGBM は 0.998 で変わらなかった。
     """
     lgb_clf = lgb.LGBMClassifier(
         n_estimators=200,
