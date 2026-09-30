@@ -1,0 +1,7 @@
+cls,comparison,name,marks,win
+c2,2-1,細分化(等重み)対 core,0−0,False
+c2,3-1,細分化(持続性)対 core,+−0,False
+c2,3-2,持続性 対 等重み(細分化の中),+−+,False
+c1,2-1,細分化(等重み)対 core,+0+,True
+c1,3-1,細分化(持続性)対 core,+0+,True
+c1,3-2,持続性 対 等重み(細分化の中),+0+,True

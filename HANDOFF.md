@@ -1,4 +1,4 @@
-# 引き継ぎ文書(ステージ1〜39)
+# 引き継ぎ文書(ステージ1〜40)
 
 2026-09-28 時点の状態。**ステージ31 で最終設定を確定し、実装を完了とした。** 以降は論文執筆が中心になる。
 ステージ20 以降の各ステージの詳細は `results/stage21`〜`stage31` の `report.md` にある。
@@ -50,7 +50,7 @@ EDINET の有価証券報告書(XBRL)から貸借対照表を集計し、継続�
 - `uv run mypy --strict src scripts tests` と `uv run ruff check .` をクリーンに保つ
   (既存の `pipelines/p03_build_dataset.py` の E501 1 件のみ例外)。
 - 最適化の呼び出しはすべて収束を検査する。未収束は例外(`SolverNotConvergedError`、`InfeasibleProjectionError`)。
-- **13 項目チェックの違反 0 を必須条件とする**(最終設定では 165 行 = 55 社 × 3 seed。ステージ19 までは 204 行 = 68 社 × 3 seed)。
+- **14 項目チェックの違反 0 を必須条件とする**(ステージ40 で 14 を追加。最終設定では 165 行 = 55 社 × 3 seed。ステージ19 までは 204 行 = 68 社 × 3 seed)。
 - 評価は企業単位(最終設定では n=55)に集約してから、ペア Wilcoxon 検定とブートストラップ 95% CI(2,000 回)で行う。
   204 行を独立標本として扱わない(擬似反復)。
 - 報告は日本語。**結論が変わることを恐れず、数字を有利に見せない。**「指標が良いこと」と「出力が妥当であること」は別で、BS 表を必ず目で読む。
@@ -83,15 +83,18 @@ EDINET の有価証券報告書(XBRL)から貸借対照表を集計し、継続�
 
 制約の一覧(層・数式・根拠・拘束社数)は `results/stage17/constraints.md`。
 
-## 5. 13 項目のチェック(`src/fsgen/accounting/plausibility.py`)
+## 5. 14 項目のチェック(`src/fsgen/accounting/plausibility.py`)
 
 1 資産合計が負 / 2 小計が負 / 3 現金がほぼ 0 / 4 主要資産が全滅 / 5 負債が 2 倍超 / 6 純資産が悪化 /
 7 健全→債務超過 / 8 資本金が半減以下 / 9 総負債が負 / 10 残余科目が負 / 11 現金 > 総資産 /
-12 基礎科目の符号違反 / 13 控除後の純額が負
+12 基礎科目の符号違反 / 13 控除後の純額が負 / 14 残余科目が下限未満(ステージ40)
 
 許容はすべて総資産比の絶対量。丸めとソルバ精度の許容は `_ROUND_TOL = 1e-3`。
 チェック 5 は終点の負債 > 総資産(0) の 1% の場合に限る(ステージ19)。
-`evaluate_checks`(1〜8)と `evaluate_extra_checks`(9〜13)に分かれている。
+`evaluate_checks`(1〜8)と `evaluate_extra_checks`(9〜14)に分かれている。
+14 は canonical に依存しない: 状態ベクトルの全残余(`RESIDUAL_SIGN_FREE` = 評価・換算差額等の残余を除く)が
+min(−1e-3 × 総資産(始点), 始点の値) を下回れば違反。10 は固定の 8 個(core では 14 と同じ科目)。
+下限の制約(`residual_nonneg_accounts`)も同じ規則で、新しい残余は既定で下限の対象になる。
 
 ## 6. ステージの経緯(要点)
 
@@ -125,6 +128,7 @@ EDINET の有価証券報告書(XBRL)から貸借対照表を集計し、継続�
 | 36 | 重みの 5 版を class 1(131 社)で再比較。class 1 では 4 版とも純資産の改善でわずかに上回ったが class 2 で再現せず(2 版は逆向き)。**等重みで確定**。どの重みでも生成の科目の向きは実データと一致しない(符号付き順位相関 約 −0.1) |
 | 38 | 遷移を T1(class 2 → 1)・T2(class 1 → 0)に分割、重みを射影・速度場にも作用させた(持続性ベース)。T2 は向きの負の相関を解消(−0.11 → +0.04)したが違反 5 社、連結は違反多数。**段階分割も作用点の拡大も不採用**。数値条件(最適性・勾配)は問題なし。ステージ37 は未実施 |
 | 39 | 有形固定資産・投資その他の資産を開いた細分化(D = 38)と OT の再評価(`results/stage39/report.md`)。細分化は class 2 で \|総資産変化\| が悪化し**不採用**。不均衡 OT は純資産の改善が大きいが \|総資産変化\| が悪化し違反も出て**不採用**。持続性の重みは細分化の空間の最近傍では両 class で勝つが、細分化が不採用なので最終設定は**変えない**。細分化の生成は有形固定資産の残余を負にして土地などを作る(34〜54% の行) |
+| 40 | 【canonical の最終試行】残余に下限を課した細分化(チェック 14 を追加)。14 項目の違反 0 だが、class 2 で \|総資産変化\| が悪化し(+0.014・+0.018)class 1 でのみ勝つ。**停止規則により細分化を不採用で確定、canonical の探索を終了**。下限を課しても土地の出現(46 / 99)は減らない(`results/stage40/report.md`) |
 
 ## 7. 却下した設計と理由
 
@@ -143,7 +147,7 @@ EDINET の有価証券報告書(XBRL)から貸借対照表を集計し、継続�
 | α=1.0(減資禁止) | 主指標は α=0.5 と同じで、拘束される社が 3→42 社に増える。感度分析として残す |
 | 総資産の変化幅 [0.5, 2.0](旧 S4) | チェック違反を減らさない |
 | 業種ハード/ソフト制約 | ステージ17・18。必須条件を満たさないか、主指標が有意に悪化する |
-| 科目の細分化(D = 38、ステージ39) | class 2 で \|総資産変化\| が有意に悪化(+0.014)し、優れる指標がない。有形固定資産の残余が負になり土地などが現れる。持続性の重みとの組み合わせ(参考)も class 2 で \|総資産変化\| が悪化 |
+| 科目の細分化(D = 38、ステージ39・40) | 残余に下限を課しても(ステージ40)、class 2 で \|総資産変化\| が有意に悪化し(等重み +0.014、持続性 +0.018)、class 1 でしか勝たない。停止規則により不採用で確定し、canonical の探索は終了(ステージ21 の統合、39・40 の細分化の 3 回) |
 | 規模制約 (0.5, 2.0) | **採否は保留**。外れ値 2 社を除けば違反 0 で、対応先の総資産比 3 倍超が 17→0 社になるが、\|総資産変化\| が +0.020 悪化する(`results/stage19/tradeoff_size.csv`) |
 
 ## 8. 既知の限界
@@ -176,6 +180,9 @@ EDINET の有価証券報告書(XBRL)から貸借対照表を集計し、継続�
   32 科目で総資産比 1e-3 を超える差は 4,156 書類中 16 件(最大 0.45、S100TMWI。ステージ39)。
 - 生成は固定資産を持たない企業にも土地などを作る(細分化で見えた。D = 38 の class 2 で土地が 0 から正になる行が 47 / 99、実データは 1 年で 1.9%。ステージ39)。
 
+- 生成は始点で 0 の科目を作る(自己株式 0 → 負が 79〜95%、実データ 0〜7%。class 1 の有形固定資産 0 → 正が 81%)。
+  細分化では土地・建物・機械を同じ向きに動かし、実データの「土地を保持して設備を減らす」を再現しない(ステージ40)。
+
 ## 9. 今後の課題(実装しない。論文に書く)
 
 - 取引ベクトル辞書(再建策を取引の組み合わせとして表す)
@@ -198,10 +205,11 @@ EDINET の有価証券報告書(XBRL)から貸借対照表を集計し、継続�
 | `make evaluate-stage18` | 業種 × 規模の 6 設計 | `precompute_stage18_transport.py`(フォールバック 4 段階)、`run_paired_stage18.py` |
 | `make evaluate-stage19` | R3 生成、規模制約の trade-off | `run_tradeoff_stage19.py` |
 | (make なし) | ステージ39 細分化・OT | 細分化用ルート `data/stage39_root`(`conf/` は core_expanded、`data/raw` などはリンク)。`build_core_expanded_stage39.py`、`persistence_stage39.py`、`dims_stage39.py`、`gen_stage39.sh`、`metrics_stage39.py`(各ルートで実行)、`compare_stage39.py`、`bs_stage39.py`。再現手順は `results/stage39/report.md` |
+| (make なし) | ステージ40 下限あり細分化 | `residuals_stage40.py`(残余の分布)、`emergence_stage40.py`(始点 0 → 正)、`gen_stage39.sh ... data/interim/stage40`、`metrics_stage39.py --gen-dir data/interim/stage40/gen`、`compare_stage40.py` |
 
 中核のコード:
 - `src/fsgen/accounting/projection_qp.py`: 射影 QP(`extra_constraints`、strict な収束検査、OSQP→CLARABEL/ECOS へのフォールバック)
-- `src/fsgen/accounting/plausibility.py`: 第 2 層の制約(`PlausibilityConfig`、`ConstraintLayers`)と 13 項目チェック
+- `src/fsgen/accounting/plausibility.py`: 第 2 層の制約(`PlausibilityConfig`、`ConstraintLayers`)と 14 項目チェック
 - `src/fsgen/evaluation/classifiers.py`: validity 用の 3 分類器(LogReg は `StandardScaler` 込み)
 - `src/fsgen/models/transport.py`、`cost.py`、`industry.py`: 輸送・コスト・業種
 
