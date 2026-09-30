@@ -28,6 +28,7 @@ LABELS = {
     "r3_cap076": "最終(R3+上限 0.757)",
     "equal": "等重み", "frequency": "頻度", "persistence": "持続性",
     "frequency_asym": "頻度+非対称",
+    "final": "最終(R3+上限+不活性)", "r1_inactive": "R1+不活性",  # ステージ43
 }
 AMAGASA = "S100TBIV"
 _CS, _CSUR = "jppfs_cor_CapitalStock", "jppfs_cor_CapitalSurplus"

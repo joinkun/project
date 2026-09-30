@@ -79,6 +79,8 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--class1", type=Path, default=Path("data/interim/stage34/class1_docs.csv"))
     ap.add_argument("--out-dir", type=Path, default=Path("data/interim/stage34/class1"))
     ap.add_argument("--tag", default="nearest_na0", help="出力ファイル名の設計名(ステージ39)")
+    ap.add_argument("--freeze", choices=("no_re", "all"), default="no_re",
+                    help="no_re = R3(最終設定)、all = R1(利益剰余金も固定。ステージ43)")
     ap.add_argument("--inactive", default="none",
                     help="不活性制約: none / selected / all / カンマ区切りの科目(ステージ41)")
     ap.add_argument("--allow-dropped-sources", action="store_true",
@@ -91,10 +93,12 @@ def main() -> None:  # noqa: PLR0915
     c = build_constraint_matrix(spec, include_subtotals=False)
     dcs = load_direction_constraints(_CANONICAL)
     frozen = tuple(n for n in load_cost_config(args.costs).non_actionable
-                   if n != "jppfs_cor_RetainedEarnings")  # R3
+                   if args.freeze == "all" or n != "jppfs_cor_RetainedEarnings")  # R3 / R1
     dim = len(names)
     targets = inactive_targets(args.inactive, names)
-    _cond, cfg = make_configs(ConstraintLayers(), _GAMMA)[_CONFIG]
+    # ステージ43: R1(利益剰余金を固定、上限なし)は W1_S5_a05_b03。R3 は上限 γ 付き
+    config = _CONFIG if args.freeze == "no_re" else "W1_S5_a05_b03"
+    _cond, cfg = make_configs(ConstraintLayers(), _GAMMA)[config]
 
     doc_ids, filer, x, assets, labels, _keep = load_dataset(
         names, load_excluded_docs(args.exclude))
@@ -146,7 +150,7 @@ def main() -> None:  # noqa: PLR0915
         for method, path in (("FM", raw[j]), ("PCFM", out)):
             transfer, profit = decompose_re_change(path[0], path[-1], names)
             row: dict[str, float | int | str] = {
-                "tag": "class1", "config": _CONFIG, "seed": args.seed, "fold": -1,
+                "tag": "class1", "config": config, "seed": args.seed, "fold": -1,
                 "method": method, "docID": doc_ids[i], "filerName": filer[i],
                 "assets_start": float(assets[i]), "status": status if method == "PCFM" else "ok",
                 "active": active if method == "PCFM" else "", "re_branch": -1,
