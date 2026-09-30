@@ -201,6 +201,8 @@ def main() -> None:
     ap.add_argument("--base", default="equal", help="ペア比較の基準にする版")
     ap.add_argument("--exclude", type=Path, default=None,
                     help="分類器の学習から除く書類の CSV(列 docID、ステージ28)")
+    ap.add_argument("--outliers", default=",".join(OUTLIERS),
+                    help="評価から除く外れ値の docID(カンマ区切り。ステージ36 で class 1 用に追加)")
     args = ap.parse_args()
     versions = tuple(args.versions.split(","))
     args.out.mkdir(parents=True, exist_ok=True)
@@ -220,8 +222,9 @@ def main() -> None:
     long.to_csv(args.out / "rows.csv", index=False)
     comp = company_level(long)
     n_firms = comp["docID"].nunique()
-    n_out = len(set(OUTLIERS) & set(comp["docID"]))
-    for tag, excl in ((f"all{n_firms}", ()), (f"excl_outliers{n_firms - n_out}", OUTLIERS)):
+    outliers = tuple(d for d in args.outliers.split(",") if d)
+    n_out = len(set(outliers) & set(comp["docID"]))
+    for tag, excl in ((f"all{n_firms}", ()), (f"excl_outliers{n_firms - n_out}", outliers)):
         summary, paired = summarize(comp, excl, versions, args.base)
         summary.to_csv(args.out / f"summary_{tag}.csv", index=False)
         paired.to_csv(args.out / f"paired_{tag}.csv", index=False)
