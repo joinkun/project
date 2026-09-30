@@ -42,12 +42,14 @@ def subset_folds(folds: Mapping[str, np.ndarray], keep: np.ndarray) -> dict[str,
 
 
 def exclusion_masks(
-    doc_ids: Sequence[str], labels: Sequence[int], excluded: frozenset[str]
+    doc_ids: Sequence[str], labels: Sequence[int], excluded: frozenset[str],
+    source_label: int = 2,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """(全行で残す行, class 2 の始点の並びで残す始点) の真偽配列。"""
+    """(全行で残す行, 始点(``source_label``、既定 class 2)の並びで残す始点) の真偽配列。"""
     row_keep = np.array([d not in excluded for d in doc_ids], dtype=bool)
     src_keep = np.array(
-        [d not in excluded for d, lab in zip(doc_ids, labels, strict=True) if lab == 2],
+        [d not in excluded for d, lab in zip(doc_ids, labels, strict=True)
+         if lab == source_label],
         dtype=bool,
     )
     return row_keep, src_keep

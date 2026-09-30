@@ -257,6 +257,7 @@ def build_linear_constraints(
     names: tuple[str, ...],
     x_start: np.ndarray,
     cfg: PlausibilityConfig,
+    relax_residual_start: bool = False,
 ) -> tuple[LinearConstraint, ...]:
     """始点 x_start に応じた追加制約(a·x >= rhs)を作る。
 
@@ -286,7 +287,14 @@ def build_linear_constraints(
             a[idx[nm]] = 1.0
             bound = RESIDUAL_FLOOR * float(members["jppfs_cor_Assets"] @ x_start)
             if float(x_start[idx[nm]]) < bound:
-                raise ValueError(f"始点が残余科目の下限を破っている: {nm}(canonicalの見直しが必要)")
+                if not relax_residual_start:
+                    raise ValueError(
+                        f"始点が残余科目の下限を破っている: {nm}(canonicalの見直しが必要)"
+                    )
+                # ステージ38 の連結(T1 の終点を T2 の始点にする)だけで使う: 下限は総資産に
+                # 比例するので、T1 で総資産が減ると T1 の下限ちょうどの値が T2 の下限を下回る。
+                # 始点の値まで緩める
+                bound = float(x_start[idx[nm]])
             out.append(LinearConstraint(f"residual:{nm[9:]}", a, bound))
     if cfg.contra_net_nonneg:
         for cname, members_c in NET_OF_CONTRA.items():

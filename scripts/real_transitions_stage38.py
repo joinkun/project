@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-"""ステージ38 B.4: 実データで 2 つの遷移(T1: class 2 → class 1、T2: class 1 → class 0)の変化を特徴づける。
+"""ステージ38 B.4: 実データで 2 つの遷移の変化を特徴づける。
+
+T1: class 2 → class 1、T2: class 1 → class 0。
 
 生成の前に実行する。ラベルはステージ30 の年度別ラベル(``data/interim/stage30/firm_years.csv``)。
 変化はステージ23 の推定用パネルの同一書類内の差分 / 前期総資産。

@@ -104,16 +104,34 @@ def train_fm(
     seed: int,
     z_val: np.ndarray | None = None,
     plan_val: np.ndarray | None = None,
+    loss_metric: np.ndarray | None = None,
 ) -> TrainResult:
     """標準的なFlow Matching学習(§3.1)。z_train: (n_train, dim) 始点(class2)。
     z_pool: (n_pool, dim) 終点候補(class0)。plan: (n_train, n_pool) 輸送計画。
 
     z_val/plan_val を渡すと、各エポックで検証損失も記録する(§7、過学習の監視)。
+
+    loss_metric(ステージ38): (dim, dim) の半正定値行列 M。損失を e^T M e(e = v_pred − v_target)
+    にする。元空間の重み W と基底 B なら M = B^T W B で、‖W^{1/2} B e‖² と一致する
+    (B の列が正規直交でなくても同じ式)。None なら ‖e‖²(従来どおり)。
     """
     rng = np.random.default_rng(seed)
     torch.manual_seed(seed)
     optimizer = torch.optim.Adam(net.parameters(), lr=lr)
     result = TrainResult()
+    metric_t = None
+    if loss_metric is not None:
+        m = np.asarray(loss_metric, dtype=float)
+        if m.shape != (z_train.shape[1], z_train.shape[1]) or not np.allclose(m, m.T):
+            raise ValueError("loss_metric は (dim, dim) の対称行列")
+        if np.linalg.eigvalsh(m).min() < -1e-10:
+            raise ValueError("loss_metric が半正定値でない")
+        metric_t = torch.tensor(m, dtype=torch.float64)
+
+    def _loss(e: torch.Tensor) -> torch.Tensor:
+        if metric_t is None:
+            return torch.mean(torch.sum(e**2, dim=-1))
+        return torch.mean(torch.einsum("ni,ij,nj->n", e, metric_t, e))
 
     z_pool_t = torch.tensor(z_pool, dtype=torch.float64)
     z_train_t = torch.tensor(z_train, dtype=torch.float64)
@@ -127,7 +145,7 @@ def train_fm(
         z_t = (1 - t)[:, None] * z_train_t + t[:, None] * z1
         v_target = z1 - z_train_t
         v_pred = net(z_t, t)
-        loss = torch.mean(torch.sum((v_pred - v_target) ** 2, dim=-1))
+        loss = _loss(v_pred - v_target)
         if not torch.isfinite(loss):
             raise SolverNotConvergedError(f"FM学習の損失が非有限(epoch={_epoch})")
 
@@ -145,7 +163,7 @@ def train_fm(
                 z_tv = (1 - tv)[:, None] * z_val_t + tv[:, None] * z1v
                 v_target_v = z1v - z_val_t
                 v_pred_v = net(z_tv, tv)
-                loss_v = torch.mean(torch.sum((v_pred_v - v_target_v) ** 2, dim=-1))
+                loss_v = _loss(v_pred_v - v_target_v)
             result.val_losses.append(float(loss_v.item()))
 
     return result

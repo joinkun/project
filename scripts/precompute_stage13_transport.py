@@ -125,6 +125,7 @@ def solve_plan(kind: str, tau: float, cost_n: np.ndarray) -> np.ndarray:
 def load_data(
     names: tuple[str, ...],
     excluded: frozenset[str] = frozenset(),
+    source_label: int = 2,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str], list[str], list[str], np.ndarray]:
     """最後の要素は、除外前の class 2 の並びで残す始点(ステージ28 の除外、fold の絞り込み用)。"""
     agg = pd.read_csv(_AGGREGATED_CSV, dtype={"docID": str})
@@ -134,7 +135,7 @@ def load_data(
     m = agg.merge(lab[["docID", "filerName", "label"]], on="docID", how="inner")
     m = m[m["total_assets"].notna() & (m["total_assets"] != 0)]
     row_keep, src_keep = exclusion_masks(
-        m["docID"].tolist(), m["label"].astype(int).tolist(), excluded
+        m["docID"].tolist(), m["label"].astype(int).tolist(), excluded, source_label
     )
     m = m[row_keep]
     assets = m["total_assets"].to_numpy(dtype=float)
@@ -170,6 +171,9 @@ def run_design(
     target_filter: str = "baseline",
     abs_threshold: float = 0.3,
     exclude_path: Path | None = None,
+    source_label: int = 2,
+    target_label: int = 0,
+    folds_path: Path = _FOLDS,
 ) -> tuple[str, dict[str, object]]:
     t0 = time.perf_counter()
     kind, tau, w_na = parse_design(name)
@@ -188,11 +192,12 @@ def run_design(
         if n in set(cc.non_actionable):
             w_plus[i] = w_minus[i] = w_na
     x, assets, label, doc, filer, edinet, src_keep = load_data(
-        names, load_excluded_docs(exclude_path)
+        names, load_excluded_docs(exclude_path), source_label
     )
-    idx0, idx2 = np.where(label == 0)[0], np.where(label == 2)[0]
+    # ステージ38: 始点・目標のラベルを変えられる(既定は class 2 → class 0)。変数名は従来のまま
+    idx0, idx2 = np.where(label == target_label)[0], np.where(label == source_label)[0]
     x0, x2 = x[idx0], x[idx2]
-    folds = subset_folds(np.load(_FOLDS), src_keep)  # 除外なしなら元の分割のまま
+    folds = subset_folds(np.load(folds_path), src_keep)  # 除外なしなら元の分割のまま
 
     mismatch_full = None
     n_no_match = 0
@@ -297,6 +302,10 @@ def main() -> None:
                     help="ステージ17 §B: 業種制約(全designsに一律適用)")
     ap.add_argument("--exclude", type=Path, default=None,
                     help="除外する書類の CSV(列 docID、ステージ28)")
+    ap.add_argument("--source-label", type=int, default=2, help="始点のクラス(ステージ38)")
+    ap.add_argument("--target-label", type=int, default=0, help="目標のクラス(ステージ38)")
+    ap.add_argument("--folds", type=Path, default=_FOLDS,
+                    help="始点の 5-fold 分割(除外前の始点の並びでの位置。ステージ38)")
     args = ap.parse_args()
     out_dir: Path = args.out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -313,6 +322,9 @@ def main() -> None:
             [args.target_filter] * len(designs),
             [args.abs_threshold] * len(designs),
             [args.exclude] * len(designs),
+            [args.source_label] * len(designs),
+            [args.target_label] * len(designs),
+            [args.folds] * len(designs),
         ))
     path = out_dir / "transport_summary.csv"
     new = pd.DataFrame([s for _, s in results])
