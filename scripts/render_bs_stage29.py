@@ -30,6 +30,7 @@ LABELS = {
     "frequency_asym": "頻度+非対称",
     "final": "最終(R3+上限+不活性)", "r1_inactive": "R1+不活性",  # ステージ43
     "prev": "更新前(ステージ43)", "new": "更新後(ステージ45)",  # ステージ45
+    "s47_final": "最終設定(ステージ47)", "s47_r1": "R1(感度分析)",  # ステージ47
 }
 AMAGASA = "S100TBIV"
 _CS, _CSUR = "jppfs_cor_CapitalStock", "jppfs_cor_CapitalSurplus"

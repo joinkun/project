@@ -163,6 +163,13 @@ def make_configs(
         v46 = dataclasses.replace(f45, capital_min_ratio=0.5, capital_stock_only=False,
                                   label="s46_a05")
         out["s46_a05"] = ("W1", apply_layers(v46, layers))
+        # ステージ47: 最終設定 = s46_ap1(資本金の下限 α = S46_ALPHA、資本金だけ)。R1 版も同じ下限
+        v47 = dataclasses.replace(f45, capital_min_ratio=S46_ALPHA, capital_stock_only=True,
+                                  label="s47_final")
+        out["s47_final"] = ("W1", apply_layers(v47, layers))
+        v47 = dataclasses.replace(r145, capital_min_ratio=S46_ALPHA, capital_stock_only=True,
+                                  label="s47_r1")
+        out["s47_r1"] = ("W1", apply_layers(v47, layers))
     if re_cap is not None:  # ステージ44 B・C: 最終設定から制約を 1 つずつ外す・変える版
         final = out[f"W1_S5_a05_b03_re{re_cap:g}"][1]
         variants = {
