@@ -230,6 +230,8 @@ class PlausibilityConfig:
     # ステージ44 C: 自己株式の増加を分配可能額の代理で制限する(会社法 461 条の近似)。
     # x_自己株式(t) >= x_自己株式(0) − max(RE(0) + 資本剰余金(0) + 自己株式(0), 0)
     treasury_cap: bool = False
+    # ステージ46: α を資本金だけに課す(False は資本金と資本剰余金の両方、ステージ43 以前の定義)
+    capital_stock_only: bool = False
     label: str = field(default="S0", compare=False)
 
 
@@ -377,7 +379,9 @@ def build_linear_constraints(
         out.append(LinearConstraint("NetAssets>=NetAssets(0)", a, float(a @ x_start)))
     if cfg.capital_min_ratio is not None:
         alpha = float(cfg.capital_min_ratio)
-        for nm in (_CAPITAL_STOCK, _CAPITAL_SURPLUS):
+        targets = ((_CAPITAL_STOCK,) if cfg.capital_stock_only
+                   else (_CAPITAL_STOCK, _CAPITAL_SURPLUS))
+        for nm in targets:
             a = np.zeros(len(names))
             a[idx[nm]] = 1.0
             x0 = float(x_start[idx[nm]])

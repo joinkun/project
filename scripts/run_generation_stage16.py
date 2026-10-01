@@ -82,6 +82,9 @@ _AGGREGATED_CSV = Path("data/interim/values/aggregated_core.csv")
 _LABELS_CSV = Path("data/interim/labels/labels.csv")
 _FOLDS = Path("data/interim/industry_12/folds.npz")
 _K = 13
+# ステージ46 A.2: 推定用パネル(1 年)の class 1・2 で資本金が減った 46 組の、当期末 / 前期末の 1 パ
+# ーセンタイル
+S46_ALPHA = 0.0019850022055580064
 _TS = (0.0, 1.0)
 _N_FOLDS = 5
 _EPOCHS = 50
@@ -152,6 +155,14 @@ def make_configs(
         r145 = dataclasses.replace(out["W1_S5_a05_b03"][1], capital_min_ratio=None,
                                    treasury_cap=True, label="s45_r1")
         out["s45_r1"] = ("W1", apply_layers(r145, layers))
+        # ステージ46: 資本金の下限(実データの減資の比の 1 パーセンタイル、資本金だけ)と、α = 0.5(
+        # 両方、参考)
+        v46 = dataclasses.replace(f45, capital_min_ratio=S46_ALPHA, capital_stock_only=True,
+                                  label="s46_ap1")
+        out["s46_ap1"] = ("W1", apply_layers(v46, layers))
+        v46 = dataclasses.replace(f45, capital_min_ratio=0.5, capital_stock_only=False,
+                                  label="s46_a05")
+        out["s46_a05"] = ("W1", apply_layers(v46, layers))
     if re_cap is not None:  # ステージ44 B・C: 最終設定から制約を 1 つずつ外す・変える版
         final = out[f"W1_S5_a05_b03_re{re_cap:g}"][1]
         variants = {
