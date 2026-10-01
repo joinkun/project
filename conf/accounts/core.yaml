@@ -428,10 +428,10 @@ totals:
 # x_treasury(t) >= x_treasury(0) を課す。自己株式は nonpos(0以下)なので、
 # これは「絶対値が増えない(自社株買いをしない)」ことを意味する。
 # 分配可能額のない企業は会社法上、自社株買いができないため。
-direction_constraints:
-- name: jppfs_cor_TreasuryStock
-  condition: net_assets_negative
-  rule: monotone_from_start
+# ステージ45: この方向制約は、自己株式の上限(分配可能額の代理、plausibility の treasury_cap)が
+# 包含するので削除した(始点で債務超過の企業は全社で代理が 0。上限ありで外しても出力の最大差 1.5e-10、
+# ステージ44)。ステージ44 以前の生成はこの方向制約を含む(git の履歴で再現できる)。
+direction_constraints: []
 
 # ステージ14 §B: 生成BSの会計的妥当性のための追加制約(射影QPに課す)。
 # 既定はすべて無効(=S0=現行、基礎科目の符号のみ)。段階的に有効にして影響を測る。

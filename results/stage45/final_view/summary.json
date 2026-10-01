@@ -1,0 +1,100 @@
+{
+  "r1_c2": {
+    "final": {
+      "net_asset_improvement": 0.237704360898002,
+      "abs_asset_change": 0.04995335913701877,
+      "sparsity": 13.0,
+      "validity_lightgbm": 0.9979107165422376
+    },
+    "r1_inactive": {
+      "net_asset_improvement": 3.330668806431529e-16,
+      "abs_asset_change": 0.11587353790154,
+      "sparsity": 12.0,
+      "validity_lightgbm": 0.7079967475125392
+    },
+    "r1": {
+      "net_asset_improvement": 1.1102230246251565e-16,
+      "abs_asset_change": 0.11508054763188781,
+      "sparsity": 12.0,
+      "validity_lightgbm": 0.6687666242589714
+    }
+  },
+  "r1_c1": {
+    "final": {
+      "net_asset_improvement": 0.18866906300539196,
+      "abs_asset_change": 0.04550304322325438,
+      "sparsity": 12.0,
+      "validity_lightgbm": 0.9999998276947325
+    },
+    "r1_inactive": {
+      "net_asset_improvement": 0.0007305040610001669,
+      "abs_asset_change": 0.05786609112199078,
+      "sparsity": 10.0,
+      "validity_lightgbm": 0.9999941716421471
+    },
+    "r1": {
+      "net_asset_improvement": 3.3306690738754706e-16,
+      "abs_asset_change": 0.05869328123150768,
+      "sparsity": 10.0,
+      "validity_lightgbm": 0.999993489419182
+    }
+  },
+  "direction": {
+    "only_class1_reversed": [
+      "__OTHER__jppfs_cor_CurrentAssets",
+      "jppfs_cor_InvestmentsAndOtherAssets",
+      "short_term_loans",
+      "accounts_payable_other",
+      "__OTHER__jppfs_cor_CurrentLiabilities"
+    ],
+    "agreement": {
+      "c2": [
+        22,
+        10,
+        20
+      ],
+      "c1_all": [
+        15,
+        5,
+        22
+      ],
+      "c1": [
+        13,
+        4,
+        23
+      ]
+    },
+    "real_opposite_c2_c1all": [
+      "jppfs_cor_InvestmentsAndOtherAssets",
+      "__OTHER__jppfs_cor_CurrentLiabilities"
+    ]
+  },
+  "final_cells": {
+    "c2": {
+      "15 項目の違反(行)": "0 / 165",
+      "純資産の改善(総資産比、5 年)": "0.238 [0.208, 0.256]",
+      "債務超過の解消(3 seed の 2/3 以上)": "8 / 12(67%) [39%, 86%]",
+      "\\|総資産変化\\|": "0.050 [0.036, 0.070]",
+      "sparsity(総資産比 1% 超で動いた科目数)": "13 [12, 14]",
+      "validity LightGBM": "0.998 [0.951, 1.000]",
+      "validity RF": "0.820 [0.767, 0.860]",
+      "validity LogReg": "0.570 [0.201, 0.760]",
+      "proximity(等重み L2)": "0.548 [0.484, 0.895]",
+      "有利子負債の圧縮": "0.102 [0.073, 0.133]",
+      "符号付き順位相関(実データ)": "+0.324 [+0.268, +0.468]"
+    },
+    "c1": {
+      "15 項目の違反(行)": "0 / 393",
+      "純資産の改善(総資産比、5 年)": "0.189 [0.182, 0.199]",
+      "債務超過の解消(3 seed の 2/3 以上)": "3 / 6(50%) [19%, 81%]",
+      "\\|総資産変化\\|": "0.046 [0.041, 0.050]",
+      "sparsity(総資産比 1% 超で動いた科目数)": "12 [11, 12]",
+      "validity LightGBM": "1.000 [1.000, 1.000]",
+      "validity RF": "0.973 [0.967, 0.980]",
+      "validity LogReg": "0.977 [0.964, 0.994]",
+      "proximity(等重み L2)": "0.311 [0.284, 0.340]",
+      "有利子負債の圧縮": "0.082 [0.068, 0.090]",
+      "符号付き順位相関(実データ)": "-0.125 [-0.152, -0.109]"
+    }
+  }
+}

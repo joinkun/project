@@ -106,7 +106,8 @@ def main() -> None:  # noqa: PLR0915
     dim = len(names)
     targets = inactive_targets(args.inactive, names)
     # ステージ43: R1(利益剰余金を固定、上限なし)は W1_S5_a05_b03。R3 は上限 γ 付き
-    config = args.config or (_CONFIG if args.freeze == "no_re" else "W1_S5_a05_b03")
+    # ステージ45: 既定は更新後の最終設定(R3 は s45_final、R1 は s45_r1)
+    config = args.config or ("s45_final" if args.freeze == "no_re" else "s45_r1")
     _cond, cfg = make_configs(ConstraintLayers(), _GAMMA)[config]
 
     doc_ids, filer, x, assets, labels, _keep = load_dataset(

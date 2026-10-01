@@ -100,7 +100,12 @@ def agreement(gen: pd.Series, real: pd.Series) -> tuple[int, int, int]:
 def main() -> None:  # noqa: PLR0915
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", type=Path, default=Path("results/stage43"))
+    ap.add_argument("--gen-dir", type=Path, default=None, help="生成の場所(ステージ45 で追加)")
+    ap.add_argument("--metrics-dir", type=Path, default=None, help="指標の場所(ステージ45 で追加)")
     args = ap.parse_args()
+    global _M, _GEN
+    _M = args.metrics_dir or _M
+    _GEN = args.gen_dir or _GEN
     rng = np.random.default_rng(0)
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
     names = state_vector_names(spec, include_subtotals=False)

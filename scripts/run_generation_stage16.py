@@ -145,6 +145,13 @@ def make_configs(
         name = f"W1_S5_a05_b03_re{re_cap:g}"
         capped = dataclasses.replace(base, re_growth_cap=re_cap, label=name)
         out[name] = ("W1", apply_layers(capped, layers))
+    if re_cap is not None:  # ステージ45: 最終設定((5) を削除、自己株式の上限を追加)と、その R1 版
+        f45 = dataclasses.replace(out[f"W1_S5_a05_b03_re{re_cap:g}"][1], capital_min_ratio=None,
+                                  treasury_cap=True, label="s45_final")
+        out["s45_final"] = ("W1", apply_layers(f45, layers))
+        r145 = dataclasses.replace(out["W1_S5_a05_b03"][1], capital_min_ratio=None,
+                                   treasury_cap=True, label="s45_r1")
+        out["s45_r1"] = ("W1", apply_layers(r145, layers))
     if re_cap is not None:  # ステージ44 B・C: 最終設定から制約を 1 つずつ外す・変える版
         final = out[f"W1_S5_a05_b03_re{re_cap:g}"][1]
         variants = {

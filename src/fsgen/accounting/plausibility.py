@@ -439,7 +439,7 @@ CHECK_NAMES = (
     "5_負債が2倍超",
     "6_純資産が悪化",
     "7_健全→債務超過",
-    "8_資本金が半減以下",
+    "8_自己株式が上限超",  # ステージ45: 資本金の半減(制約 (5) と同じ条件)を外し、この枠に置き換えた
 )
 _CASH_TOL = 1e-3  # 現金・主要資産の「ほぼ0」: 始点の総資産比
 _NA_TOL = 1e-6  # 数値誤差の許容(tilde空間)
@@ -473,7 +473,8 @@ def evaluate_checks(
         & (np.abs(x1[:, idx[_RECEIVABLES]]) / assets0 < _CASH_TOL)
         & (np.abs(x1[:, idx[_INVENTORIES]]) / assets0 < _CASH_TOL)
     )
-    cs0, cs1 = x0[:, idx[_CAPITAL_STOCK]], x1[:, idx[_CAPITAL_STOCK]]
+    ts0, ts1 = x0[:, idx[_TREASURY]], x1[:, idx[_TREASURY]]
+    dist0 = np.array([distributable_proxy(row, names) for row in x0])
     flags = np.column_stack([
         assets1 < 0,
         sub_neg,
@@ -487,10 +488,10 @@ def evaluate_checks(
         # 7: 始点の純資産がごく小さい正値の社(68社中1社、0.95%)が丸め程度で負になっても
         # 数えないよう、6・8と同じ許容 _ROUND_TOL を使う(ステージ19 §A.3)
         (na0 > 0) & (na1 < -_ROUND_TOL),
-        # 絶対許容(比だと資本金が極小の社で誤検出)。QPの受理判定は 1e-6×scale(円建て)の
-        # 相対許容なので、tilde空間(÷総資産)に直すと大企業では 1e-6 を超えうる
-        # (ステージ18で実測: 4.8e-6)。ソルバ精度の範囲として _ROUND_TOL を使う。
-        (cs0 > 0) & (cs1 < 0.5 * cs0 - _ROUND_TOL),
+        # 8(ステージ45): 自己株式が分配可能額の代理による上限を超えて増えた
+        # x_自己株式(1) < x_自己株式(0) − max(RE(0) + 資本剰余金(0) + 自己株式(0), 0)。
+        # 以前の 8(資本金が始点の半分以下)は制約 (5) と同じ条件で、(5) とともに削除した
+        ts1 < ts0 - dist0 - _SIGN_TOL * np.abs(assets0),
     ])
     return flags
 

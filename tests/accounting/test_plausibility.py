@@ -106,11 +106,14 @@ def test_evaluate_checks_flags_each_condition() -> None:
     x1 = x0.copy()
     x1[_IDX["jppfs_cor_CashAndDeposits"]] = 0.0
     x1[_IDX["inventories"]] = 0.0
-    x1[_IDX["jppfs_cor_CapitalStock"]] = 0.3
+    x1[_IDX["jppfs_cor_CapitalStock"]] = 0.3  # 資本金の半減はチェックしない(ステージ45)
     x1[_IDX["jppfs_cor_OtherCA"]] = 0.6  # 貸借は保つ(資産合計=0.6+...)
     flags = evaluate_checks(x0[None, :], x1[None, :], _SPEC, _NAMES)[0]
-    assert flags[2] and flags[3] and flags[7]  # 現金≈0・主要資産全滅・資本金半減以下
-    assert not flags[0]
+    assert flags[2] and flags[3]  # 現金≈0・主要資産全滅
+    assert not flags[0] and not flags[7]
+    # 8(ステージ45): 始点の利益剰余金が負で分配可能額の代理 D = 0 → 自己株式を増やせば違反
+    x1[_IDX["jppfs_cor_TreasuryStock"]] = -0.05
+    assert evaluate_checks(x0[None, :], x1[None, :], _SPEC, _NAMES)[0, 7]
 
 
 def test_residual_bounds_cover_only_named_accounts() -> None:
@@ -440,3 +443,22 @@ def test_check15_flags_emerging_treasury_stock_and_projection_prevents_it() -> N
                                  frozen_accounts=inactive_accounts(x0, _NAMES))
     assert abs(x[_IDX["jppfs_cor_TreasuryStock"]]) < 1e-9
     assert not evaluate_extra_checks(x[None, :], x0[None, :], _SPEC, _NAMES)[0, 6]
+
+
+# ---- ステージ45: 自己株式の上限(分配可能額の代理)----
+
+
+def test_treasury_cap_constraint_holds_after_projection() -> None:
+    from fsgen.accounting.plausibility import distributable_proxy
+    x0 = _start()
+    x0[_IDX["jppfs_cor_RetainedEarnings"]] = 0.1  # D = 0.1 + 0 + 0
+    x0[_IDX["jppfs_cor_CapitalStock"]] = 0.4
+    assert distributable_proxy(x0, _NAMES) == pytest.approx(0.1)
+    y = x0.copy()
+    y[_IDX["jppfs_cor_TreasuryStock"]] = -0.3  # D を超える自社株買い
+    y[_IDX["jppfs_cor_CashAndDeposits"]] -= 0.3
+    extra = build_linear_constraints(_SPEC, _NAMES, x0, PlausibilityConfig(treasury_cap=True))
+    x, _ = project_onto_feasible(y, _SPEC, x_start=x0, extra_constraints=extra)
+    assert x[_IDX["jppfs_cor_TreasuryStock"]] >= -0.1 - 1e-7
+    assert evaluate_checks(x0[None, :], y[None, :], _SPEC, _NAMES)[0, 7]
+    assert not evaluate_checks(x0[None, :], x[None, :], _SPEC, _NAMES)[0, 7]

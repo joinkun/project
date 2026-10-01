@@ -3,10 +3,10 @@
 # 使い方: gen_stage44.sh <c2|c1> <setting> <seed> <config> <inactive> [追加の引数...]
 #   config: 射影の設定名(最終設定は W1_S5_a05_b03_re0.756519、変種は s44_*)
 #   inactive: --inactive の値(最終設定は selected)
-#   追加の引数: --k 8 / --basis null など
+#   追加の引数: --k 8 / --basis null / --freeze all(R1)など。出力先は環境変数 OUT_BASE(既定 data/interim/stage44)
 set -e
 cls=$1; setting=$2; seed=$3; config=$4; inactive=$5; shift 5
-base=data/interim/stage44
+base=${OUT_BASE:-data/interim/stage44}
 plans=data/interim/stage28/plans_equal/plans_nearest_na0.npz
 mkdir -p $base/gen/$cls/$setting $base/logs
 if [ "$cls" = c2 ]; then
