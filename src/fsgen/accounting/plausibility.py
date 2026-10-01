@@ -185,6 +185,20 @@ def residual_nonneg_accounts(names: tuple[str, ...]) -> tuple[str, ...]:
 
 
 _RETAINED_EARNINGS = "jppfs_cor_RetainedEarnings"
+_TREASURY = "jppfs_cor_TreasuryStock"
+
+
+def distributable_proxy(x: np.ndarray, names: tuple[str, ...]) -> float:
+    """分配可能額の代理 max(利益剰余金 + 資本剰余金 + 自己株式, 0)。
+
+    ステージ44 C、会社法 461 条の近似。
+
+    32 科目は資本剰余金を資本準備金とその他資本剰余金に、利益剰余金を利益準備金と繰越利益剰余金に
+    分けないので、準備金を控除できず、真の分配可能額より大きい(緩い)。自己株式は負の値で、加算で控除になる。
+    """
+    idx = {n: i for i, n in enumerate(names)}
+    v = float(x[idx[_RETAINED_EARNINGS]] + x[idx[_CAPITAL_SURPLUS]] + x[idx[_TREASURY]])
+    return max(v, 0.0)
 
 
 @dataclass(frozen=True)
@@ -213,6 +227,9 @@ class PlausibilityConfig:
     # 制限する。2 つの分岐(re_decomposition_branches)の和集合なので、build_linear_constraints
     # には含めず、呼び出し側が分岐ごとに射影して近い方を採る
     re_decomposition_gamma: float | None = None
+    # ステージ44 C: 自己株式の増加を分配可能額の代理で制限する(会社法 461 条の近似)。
+    # x_自己株式(t) >= x_自己株式(0) − max(RE(0) + 資本剰余金(0) + 自己株式(0), 0)
+    treasury_cap: bool = False
     label: str = field(default="S0", compare=False)
 
 
@@ -399,6 +416,12 @@ def build_linear_constraints(
         cap = cfg.re_growth_cap
         rhs = -(float(x_start[idx[_RETAINED_EARNINGS]]) + cap * a0)
         out.append(LinearConstraint(f"RE-RE(0)<={cap:g}*Assets(0)", a, rhs))
+    if cfg.treasury_cap:
+        a = np.zeros(len(names))
+        a[idx[_TREASURY]] = 1.0
+        ts0 = float(x_start[idx[_TREASURY]])
+        out.append(LinearConstraint("treasury>=start-distributable", a,
+                                    ts0 - distributable_proxy(x_start, names)))
     if cfg.assets_ratio_range is not None:
         lo, hi = cfg.assets_ratio_range
         a = members["jppfs_cor_Assets"]
@@ -554,6 +577,7 @@ __all__ = [
     "SUBTOTAL_NONNEG_IDS",
     "build_linear_constraints",
     "decompose_re_change",
+    "distributable_proxy",
     "evaluate_checks",
     "load_plausibility_config",
     "re_decomposition_branches",

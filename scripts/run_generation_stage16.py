@@ -27,6 +27,7 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 import argparse  # noqa: E402
 import dataclasses  # noqa: E402
+import json  # noqa: E402
 import time  # noqa: E402
 from pathlib import Path  # noqa: E402
 
@@ -37,6 +38,7 @@ import torch  # noqa: E402
 from fsgen.accounting.constraints import (  # noqa: E402
     build_constraint_matrix,
     load_canonical_spec,
+    orthonormal_basis,
     state_vector_names,
 )
 from fsgen.accounting.plausibility import (  # noqa: E402
@@ -90,6 +92,17 @@ _DELTA = 1e-3
 
 
 
+
+def reduced_basis(c: np.ndarray, x: np.ndarray, k: int, kind: str) -> np.ndarray:
+    """低次元基底(ステージ44 A)。pca: null(C^T) 内の PCA 上位 k(現行)、null: null(C^T) の
+    正規直交基底 U そのもの(C の完全 SVD の、rank を超える左特異ベクトル。PCA を使わない)。"""
+    if kind == "pca":
+        return build_reduced_basis(c, x, k=k)
+    if kind == "null":
+        u: np.ndarray = orthonormal_basis(c)
+        return u
+    raise ValueError(kind)
+
 def inactive_targets(arg: str, names: tuple[str, ...]) -> tuple[str, ...]:
     """``--inactive`` の値 → 不活性制約の対象科目(ステージ41)。
 
@@ -132,6 +145,24 @@ def make_configs(
         name = f"W1_S5_a05_b03_re{re_cap:g}"
         capped = dataclasses.replace(base, re_growth_cap=re_cap, label=name)
         out[name] = ("W1", apply_layers(capped, layers))
+    if re_cap is not None:  # ステージ44 B・C: 最終設定から制約を 1 つずつ外す・変える版
+        final = out[f"W1_S5_a05_b03_re{re_cap:g}"][1]
+        variants = {
+            "s44_no_alpha": {"capital_min_ratio": None},
+            "s44_no_beta": {"retention_beta": None},
+            "s44_no_cap": {"re_growth_cap": None},
+            "s44_no_all": {"capital_min_ratio": None, "retention_beta": None,
+                           "re_growth_cap": None},
+            "s44_alpha0": {"capital_min_ratio": 0.0},
+            "s44_alpha03": {"capital_min_ratio": 0.3},
+            "s44_alpha10": {"capital_min_ratio": 1.0},
+            "s44_beta05": {"retention_beta": 0.5},
+            "s44_beta10": {"retention_beta": 1.0},
+            "s44_tscap": {"treasury_cap": True},
+        }
+        for name, changes in variants.items():
+            v = dataclasses.replace(final, label=name, **changes)  # type: ignore[arg-type]
+            out[name] = ("W1", apply_layers(v, layers))
     for gamma in re_decomp:  # ステージ29 R4: 欠損填補の振替と利益部分(上限 γ)の分離
         base = out["W1_S5_a05_b03"][1]
         name = f"W1_S5_a05_b03_r4g{gamma:g}"
@@ -182,6 +213,11 @@ def main() -> None:  # noqa: PLR0915
                     help="利益剰余金の増加の上限 γ(総資産比、ステージ27)")
     ap.add_argument("--re-decomp", default="",
                     help="R4 の利益部分の上限 γ のカンマ区切り(ステージ29。空なら作らない)")
+    ap.add_argument("--basis", choices=("pca", "null"), default="pca",
+                    help="pca = null(C^T) 内の PCA 上位 k(現行)、null = null(C^T) の"
+                         "正規直交基底そのもの(PCA なし、31 次元。ステージ44)")
+    ap.add_argument("--loss-log", action="store_true",
+                    help="fold ごとの損失を JSON に書く(ステージ44)")
     ap.add_argument("--inactive", default="none",
                     help="不活性制約: none / selected / all / カンマ区切りの科目(ステージ41)")
     ap.add_argument("--allow-dropped-sources", action="store_true",
@@ -225,6 +261,7 @@ def main() -> None:  # noqa: PLR0915
     print(f"[{tag}] configs={len(configs)} frozen={frozen}", flush=True)
 
     rows: list[dict[str, float | int | str]] = []
+    loss_log: dict[str, dict[str, object]] = {}
 
     def add(config: str, method: str, k: int, p: int, path: np.ndarray, status: str,
             active: str, re_branch: int = -1, n_inactive: int = 0) -> None:
@@ -256,19 +293,21 @@ def main() -> None:  # noqa: PLR0915
             print(f"    [{tag}] fold {k}: 質量 0 の訓練始点 {int((~alive).sum())} 社を学習から除く",
                   flush=True)
         pool_idx = idx0 + [idx2[p] for p in train_pos]
-        b = build_reduced_basis(c, x_tilde[pool_idx], k=args.k)
+        b = reduced_basis(c, x_tilde[pool_idx], args.k, args.basis)
         z0 = x0_tilde @ b
         z_train, z_test = x2_tilde[train_pos] @ b, x2_tilde[test_pos] @ b
         # ステージ26: 種を設定してからネットワークを作る(seeded_velocity_field)。以前は
         # train_fm の中で初めて種を設定していたため、fold 0 の初期値だけが実行ごとに変わっていた。
         net = seeded_velocity_field(
             args.seed * 1000 + k,
-            dim=args.k,
+            dim=b.shape[1],
             hidden=_HIDDEN,
             n_layers=_N_LAYERS,
         )
-        train_fm(z_train[alive], z0, plan_train[alive], net, epochs=args.epochs, lr=_LR,
-                 seed=args.seed, z_val=z_test, plan_val=plan_test)
+        tr = train_fm(z_train[alive], z0, plan_train[alive], net, epochs=args.epochs, lr=_LR,
+                      seed=args.seed, z_val=z_test, plan_val=plan_test)
+        loss_log[str(k)] = {"train": tr.train_losses, "val": tr.val_losses,
+                            "dim": int(b.shape[1])}
         z_start = x2_tilde[test_pos] @ b
         z_path = euler_sample_batch(net, z_start, _TS)
         raw = x2_tilde[test_pos][:, None, :] + np.einsum(
@@ -315,6 +354,8 @@ def main() -> None:  # noqa: PLR0915
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     out_path = args.out_dir / f"{tag}.parquet"
+    if args.loss_log:  # ステージ44 A: fold ごとの訓練・検証損失(epoch ごと)
+        (args.out_dir / f"{tag}__losses.json").write_text(json.dumps(loss_log), encoding="utf-8")
     pd.DataFrame(rows).to_parquet(out_path, index=False)
     print(f"[{tag}] {len(rows)}行を書き出しました: {out_path}", flush=True)
 

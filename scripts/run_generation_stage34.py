@@ -19,6 +19,7 @@ import os
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 import argparse  # noqa: E402
+import json  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 import numpy as np  # noqa: E402
@@ -36,6 +37,7 @@ from run_generation_stage16 import (  # noqa: E402
     inactive_targets,
     load_dataset,
     make_configs,
+    reduced_basis,
 )
 
 from fsgen.accounting.constraints import (  # noqa: E402
@@ -53,7 +55,6 @@ from fsgen.accounting.projection_qp import (  # noqa: E402
     load_direction_constraints,
     project_onto_feasible,
 )
-from fsgen.accounting.subspace import build_reduced_basis  # noqa: E402
 from fsgen.datasets.exclusion import load_excluded_docs  # noqa: E402
 from fsgen.errors import InfeasibleProjectionError  # noqa: E402
 from fsgen.models.cost import combined_projection_weights, load_cost_config  # noqa: E402
@@ -79,6 +80,11 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--class1", type=Path, default=Path("data/interim/stage34/class1_docs.csv"))
     ap.add_argument("--out-dir", type=Path, default=Path("data/interim/stage34/class1"))
     ap.add_argument("--tag", default="nearest_na0", help="出力ファイル名の設計名(ステージ39)")
+    ap.add_argument("--k", type=int, default=_K, help="低次元基底の次元(ステージ44)")
+    ap.add_argument("--basis", choices=("pca", "null"), default="pca",
+                    help="pca(現行)/ null = null(C^T) の正規直交基底そのもの(ステージ44)")
+    ap.add_argument("--config", default="", help="射影の設定名(既定は --freeze による。ステージ44)")
+    ap.add_argument("--loss-log", action="store_true", help="訓練損失を JSON に書く(ステージ44)")
     ap.add_argument("--freeze", choices=("no_re", "all"), default="no_re",
                     help="no_re = R3(最終設定)、all = R1(利益剰余金も固定。ステージ43)")
     ap.add_argument("--inactive", default="none",
@@ -97,7 +103,7 @@ def main() -> None:  # noqa: PLR0915
     dim = len(names)
     targets = inactive_targets(args.inactive, names)
     # ステージ43: R1(利益剰余金を固定、上限なし)は W1_S5_a05_b03。R3 は上限 γ 付き
-    config = _CONFIG if args.freeze == "no_re" else "W1_S5_a05_b03"
+    config = args.config or (_CONFIG if args.freeze == "no_re" else "W1_S5_a05_b03")
     _cond, cfg = make_configs(ConstraintLayers(), _GAMMA)[config]
 
     doc_ids, filer, x, assets, labels, _keep = load_dataset(
@@ -117,12 +123,12 @@ def main() -> None:  # noqa: PLR0915
                       allow_zero_mass_rows=args.allow_dropped_sources)
     alive = plan.sum(axis=1) > 1e-12  # ステージ39: 質量 0 の class 2 始点は学習から除く
 
-    b = build_reduced_basis(c, x_tilde[idx0 + idx2], k=_K)
+    b = reduced_basis(c, x_tilde[idx0 + idx2], args.k, args.basis)  # ステージ44 A
     z0 = x_tilde[idx0] @ b
     z2 = x_tilde[idx2] @ b
-    net = seeded_velocity_field(args.seed * 1000 + _FULL_FOLD, dim=_K, hidden=_HIDDEN,
+    net = seeded_velocity_field(args.seed * 1000 + _FULL_FOLD, dim=b.shape[1], hidden=_HIDDEN,
                                 n_layers=_N_LAYERS)
-    train_fm(z2[alive], z0, plan[alive], net, epochs=_EPOCHS, lr=_LR, seed=args.seed)
+    tr = train_fm(z2[alive], z0, plan[alive], net, epochs=_EPOCHS, lr=_LR, seed=args.seed)
     x1s = x_tilde[idx1]
     z_start = x1s @ b
     z_path = euler_sample_batch(net, z_start, _TS)
@@ -163,6 +169,10 @@ def main() -> None:  # noqa: PLR0915
             rows.append(row)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     out_path = args.out_dir / f"{args.tag}__seed{args.seed}.parquet"
+    if args.loss_log:  # ステージ44 A: class 1 は検証用の分割がないので訓練損失だけ
+        (args.out_dir / f"{args.tag}__seed{args.seed}__losses.json").write_text(
+            json.dumps({"full": {"train": tr.train_losses, "val": tr.val_losses,
+                                 "dim": int(b.shape[1])}}), encoding="utf-8")
     pd.DataFrame(rows).to_parquet(out_path, index=False)
     n_inf = sum(1 for r in rows if r["status"] == "infeasible")
     print(f"[class1 seed{args.seed}] 始点 {len(idx1)} 社、学習 class 2 {len(idx2)} 社、"
