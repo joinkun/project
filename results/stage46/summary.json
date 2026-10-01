@@ -1,0 +1,12 @@
+{
+  "judgment": {
+    "ok1": true,
+    "ok2": false,
+    "ok3": true
+  },
+  "c3": {
+    "src_median": 1.144158439038599,
+    "tgt_median": 0.8202413114932595,
+    "share_tgt_higher": 0.23636363636363636
+  }
+}
