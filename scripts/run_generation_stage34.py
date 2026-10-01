@@ -87,6 +87,8 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--loss-log", action="store_true", help="訓練損失を JSON に書く(ステージ44)")
     ap.add_argument("--freeze", choices=("no_re", "all"), default="no_re",
                     help="no_re = R3(最終設定)、all = R1(利益剰余金も固定。ステージ43)")
+    ap.add_argument("--no-direction", action="store_true",
+                    help="方向制約を外す(自己株式の上限への統合の確認、ステージ44)")
     ap.add_argument("--inactive", default="none",
                     help="不活性制約: none / selected / all / カンマ区切りの科目(ステージ41)")
     ap.add_argument("--allow-dropped-sources", action="store_true",
@@ -97,7 +99,8 @@ def main() -> None:  # noqa: PLR0915
     spec = load_canonical_spec(_CANONICAL)
     names = state_vector_names(spec, include_subtotals=False)
     c = build_constraint_matrix(spec, include_subtotals=False)
-    dcs = load_direction_constraints(_CANONICAL)
+    # ステージ44 C.6: --no-direction で方向制約(債務超過企業の自社株買い禁止)を外す(統合の確認用)
+    dcs = () if args.no_direction else load_direction_constraints(_CANONICAL)
     frozen = tuple(n for n in load_cost_config(args.costs).non_actionable
                    if args.freeze == "all" or n != "jppfs_cor_RetainedEarnings")  # R3 / R1
     dim = len(names)

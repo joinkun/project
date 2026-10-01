@@ -1,0 +1,180 @@
+{
+  "A_c2_null31": {
+    "純資産の改善": "-0.0359 [-0.0918, -0.0133]",
+    "債務超過の解消率(社ごとの 3 seed 平均)": "+0.0000 [-0.3333, +0.0000]",
+    "|総資産変化|": "+0.0007 [-0.0205, +0.0136]",
+    "sparsity": "+2.0000 [+2.0000, +3.0000]",
+    "validity": "+0.0001 [+0.0000, +0.0008]",
+    "corr": "+0.034 [-0.063, +0.114]",
+    "corr_worse": false,
+    "primary_worse": [
+      "純資産の改善",
+      "sparsity"
+    ]
+  },
+  "A_c2_k8": {
+    "純資産の改善": "-0.0152 [-0.0271, +0.0038]",
+    "債務超過の解消率(社ごとの 3 seed 平均)": "差 0",
+    "|総資産変化|": "+0.0081 [-0.0022, +0.0165]",
+    "sparsity": "-1.0000 [-1.0000, +0.0000]",
+    "validity": "-0.0020 [-0.0065, -0.0002]",
+    "corr": "-0.008 [-0.141, +0.061]",
+    "corr_worse": false,
+    "primary_worse": []
+  },
+  "A_c2_k20": {
+    "純資産の改善": "+0.0061 [-0.0158, +0.0387]",
+    "債務超過の解消率(社ごとの 3 seed 平均)": "+0.0000 [+0.0000, +0.0000]",
+    "|総資産変化|": "+0.0022 [-0.0110, +0.0164]",
+    "sparsity": "+0.0000 [+0.0000, +1.0000]",
+    "validity": "-0.0000 [-0.0007, +0.0000]",
+    "corr": "-0.037 [-0.128, +0.042]",
+    "corr_worse": false,
+    "primary_worse": []
+  },
+  "A_c1_null31": {
+    "純資産の改善": "-0.0292 [-0.0362, -0.0232]",
+    "債務超過の解消率(社ごとの 3 seed 平均)": "+0.0000 [-0.1667, +0.0000]",
+    "|総資産変化|": "-0.0068 [-0.0115, -0.0038]",
+    "sparsity": "+4.0000 [+3.0000, +4.0000]",
+    "validity": "-0.0000 [-0.0000, +0.0000]",
+    "corr": "-0.019 [-0.046, +0.010]",
+    "corr_worse": false,
+    "primary_worse": [
+      "純資産の改善",
+      "sparsity"
+    ]
+  },
+  "A_c1_k8": {
+    "純資産の改善": "-0.0364 [-0.0399, -0.0345]",
+    "債務超過の解消率(社ごとの 3 seed 平均)": "+0.0000 [-0.1667, +0.0000]",
+    "|総資産変化|": "-0.0158 [-0.0222, -0.0088]",
+    "sparsity": "+0.0000 [-1.0000, +0.0000]",
+    "validity": "-0.0000 [-0.0000, -0.0000]",
+    "corr": "+0.203 [+0.172, +0.253]",
+    "corr_worse": false,
+    "primary_worse": [
+      "純資産の改善"
+    ]
+  },
+  "A_c1_k20": {
+    "純資産の改善": "+0.0125 [+0.0081, +0.0199]",
+    "債務超過の解消率(社ごとの 3 seed 平均)": "+0.0000 [+0.0000, +0.1667]",
+    "|総資産変化|": "+0.0129 [+0.0090, +0.0188]",
+    "sparsity": "+1.0000 [+1.0000, +2.0000]",
+    "validity": "+0.0000 [+0.0000, +0.0000]",
+    "corr": "+0.235 [+0.196, +0.254]",
+    "corr_worse": false,
+    "primary_worse": [
+      "|総資産変化|",
+      "sparsity"
+    ]
+  },
+  "A_pca_unnecessary": false,
+  "B": {
+    "no_alpha": {
+      "c2": {
+        "viol": 43,
+        "primary_worse": [],
+        "corr_worse": false,
+        "dev_worse": false
+      },
+      "c1": {
+        "viol": 89,
+        "primary_worse": [],
+        "corr_worse": false,
+        "dev_worse": false
+      }
+    },
+    "no_beta": {
+      "c2": {
+        "viol": 0,
+        "primary_worse": [
+          "純資産の改善"
+        ],
+        "corr_worse": false,
+        "dev_worse": true
+      },
+      "c1": {
+        "viol": 0,
+        "primary_worse": [],
+        "corr_worse": false,
+        "dev_worse": true
+      }
+    },
+    "no_cap": {
+      "c2": {
+        "viol": 0,
+        "primary_worse": [],
+        "corr_worse": false,
+        "dev_worse": "False"
+      },
+      "c1": {
+        "viol": 0,
+        "primary_worse": [],
+        "corr_worse": false,
+        "dev_worse": "False"
+      }
+    },
+    "no_all": {
+      "c2": {
+        "viol": 50,
+        "primary_worse": [],
+        "corr_worse": false,
+        "dev_worse": "True"
+      },
+      "c1": {
+        "viol": 92,
+        "primary_worse": [
+          "純資産の改善"
+        ],
+        "corr_worse": false,
+        "dev_worse": "True"
+      }
+    }
+  },
+  "C": {
+    "c2": {
+      "viol": 0,
+      "primary_worse": [],
+      "rates": {
+        "final": 0.775,
+        "tscap": 0.225,
+        "tscap_only": 0.225
+      },
+      "integration": {
+        "tscap_nodir": [
+          1.4984158358544164e-10,
+          0
+        ],
+        "final_nodir": [
+          0.17332574202620762,
+          27
+        ]
+      },
+      "insolvent": 12,
+      "insolvent_dpos": 0
+    },
+    "c1": {
+      "viol": 0,
+      "primary_worse": [],
+      "rates": {
+        "final": 0.9541284403669725,
+        "tscap": 0.6605504587155964,
+        "tscap_only": 0.6605504587155964
+      },
+      "integration": {
+        "tscap_nodir": [
+          3.8356262610506064e-10,
+          0
+        ],
+        "final_nodir": [
+          0.02711859184558365,
+          15
+        ]
+      },
+      "insolvent": 6,
+      "insolvent_dpos": 0
+    }
+  }
+}
