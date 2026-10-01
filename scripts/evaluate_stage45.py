@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """ステージ45: 制約の更新((5) を削除、自己株式の上限を追加、方向制約を削除)の前後比較。
 
-入力: ``metrics_stage39.py --gen-dir data/interim/stage45/gen`` の出力(``data/interim/stage45/metrics``)。
-``prev``・``prev_r1`` は更新前(ステージ43 の最終設定と R1 + 不活性制約)、``new``・``new_r1`` は更新後。
+入力: ``metrics_stage39.py --gen-dir data/interim/stage45/gen`` の出力
+(``data/interim/stage45/metrics``)。``prev``・``prev_r1`` は更新前
+(ステージ43 の最終設定と R1 + 不活性制約)、``new``・``new_r1`` は更新後。
 
 出力(``results/stage45/``): ``results.md``、``summary.json``。
 
@@ -78,8 +79,10 @@ def main() -> None:  # noqa: PLR0915
     summary: dict[str, object] = {}
     lines = ["# ステージ45: 制約の更新の前後比較", "",
              "更新前 = ステージ43 の最終設定(α = 0.5、方向制約あり、自己株式の上限なし)。"
-             "更新後 = (5) を削除、自己株式の上限(分配可能額の代理)を追加、ステージ7 の方向制約を削除。"
-             "他は同じ(R3 + 上限 γ = 0.757、β = 0.3、不活性制約 規則 M、K = 13)。チェックは更新後の 15 項目"
+             "更新後 = (5) を削除、自己株式の上限(分配可能額の代理)を追加、ステージ7 の方向制約"
+             "を削除。"
+             "他は同じ(R3 + 上限 γ = 0.757、β = 0.3、不活性制約 規則 M、K = 13)。チェックは更新"
+             "後の 15 項目"
              "(8 = 自己株式が上限超)で数える。", ""]
 
     # ---------------- D.2 全指標 ----------------
@@ -112,9 +115,11 @@ def main() -> None:  # noqa: PLR0915
             va = viol[viol["setting"] == after].groupby("check")["rows"].sum()
             n = int(s_.loc[after, "n"])
             lines += [f"## D.2 {title}、{CLS[cls]}", "",
-                      "| 指標 | 更新前 | 更新後 | 差(更新後 − 更新前)[95% CI] |", "|---|---:|---:|---|",
+                      "| 指標 | 更新前 | 更新後 | 差(更新後 − 更新前)[95% CI] |", "|---|---:|---"
+                                                                   ":|---|",
                       f"| 15 項目の違反(行) | {int(vb.sum())} / {3 * n}"
-                      + (f"({'、'.join(f'{k} {int(v)}' for k, v in vb.items())})" if len(vb) else "")
+                      + ("(" + "、".join(f"{k} {int(v)}" for k, v in vb.items()) + ")"
+                         if len(vb) else "")
                       + f" | **{int(va.sum())} / {3 * n}** | — |"]
             labels = {m: lab for m, lab, _ in CONTINUOUS}
             for m in ("net_asset_improvement", "abs_asset_change", "sparsity", "validity_lightgbm",
@@ -122,8 +127,9 @@ def main() -> None:  # noqa: PLR0915
                 q = pr.loc[labels[m]]
                 dg = 0 if m == "sparsity" else 3
                 lab_m = labels[m].replace("|", "\\|")
+                ci = fmt_ci(q["median_diff(version-equal)"], q["ci_low"], q["ci_high"])
                 lines.append(f"| {lab_m} | {s_.loc[before, m]:.{dg}f} | {s_.loc[after, m]:.{dg}f} "
-                             f"| {fmt_ci(q['median_diff(version-equal)'], q['ci_low'], q['ci_high'])} |")
+                             f"| {ci} |")
                 if m == "net_asset_improvement":
                     q2 = pr.loc["債務超過の解消率(社ごとの 3 seed 平均)"]
                     lines.append(
@@ -132,8 +138,11 @@ def main() -> None:  # noqa: PLR0915
                         f"{int(s_.loc[before, 'insolvent_start'])} "
                         f"| {int(s_.loc[after, 'resolved_firms(>=2/3 seeds)'])}/"
                         f"{int(s_.loc[after, 'insolvent_start'])} "
-                        f"| 解消率 {fmt_ci(q2['median_diff(version-equal)'], q2['ci_low'], q2['ci_high'])} |")
-            lines += [f"| 符号付き順位相関 | {cb:+.3f} | {ca:+.3f} | {fmt_ci(ca - cb, dlo, dhi, 3)} |", ""]
+                        f"| 解消率"
+                        " " + fmt_ci(q2["median_diff(version-equal)"], q2["ci_low"],
+                                     q2["ci_high"]) + " |")
+            lines += [f"| 符号付き順位相関 | {cb:+.3f} | {ca:+.3f} |"
+                      f" {fmt_ci(ca - cb, dlo, dhi, 3)} |", ""]
             summary[f"{cls}_{after}"] = {
                 "violations": int(va.sum()), "violations_before": int(vb.sum()),
                 **{m: float(s_.loc[after, m]) for m in ("net_asset_improvement",
@@ -180,8 +189,10 @@ def main() -> None:  # noqa: PLR0915
 
     lines += ["## B.3・D.3 実データとの比較", "",
               "資本金の半減と自己株式の増加の実データは、class 1・2(2022 年度、特殊業種を除く)"
-              f"{len(press)} 社の 2022 → 2024 年度末(2 年)。払込資本・利益剰余金は、実際に再建した企業(年率)。"
-              "生成は 5 年(払込資本・利益剰余金は年率に直した)。企業は 3 seed の 2/3 以上で数える。", ""]
+              f"{len(press)} 社の 2022 → 2024 年度末(2 年)。払込資本・利益剰余金は、実際に再建"
+              f"した企業(年率)。"
+              "生成は 5 年(払込資本・利益剰余金は年率に直した)。企業は 3 seed の 2/3 以上で数え"
+              "る。", ""]
     for cls in ("c2", "c1"):
         lines += [f"### {CLS[cls]}", "",
                   "| 項目 | 生成(更新前) | 生成(更新後) | 実データ |", "|---|---|---|---|"]
@@ -193,9 +204,16 @@ def main() -> None:  # noqa: PLR0915
             ("自己株式が増えた企業の割合(保有企業)", pct(*ts_up(gp)), pct(*ts_up(gn)),
              pct(int(real_ts.sum()), len(real_ts))),
         ]
+        def paid(g: pd.DataFrame) -> pd.Series:
+            out: pd.Series = annual(g, _CS) + annual(g, _CSUR)
+            return out
+
+        def re_(g: pd.DataFrame) -> pd.Series:
+            return annual(g, _RE)
+
         for lab, col_fn, real_col in (
-            ("払込資本を増やした企業の割合", lambda g: annual(g, _CS) + annual(g, _CSUR), "d_paid"),
-            ("利益剰余金が増えた企業の割合", lambda g: annual(g, _RE), "d_re"),
+            ("払込資本を増やした企業の割合", paid, "d_paid"),
+            ("利益剰余金が増えた企業の割合", re_, "d_re"),
         ):
             vp, vn = col_fn(gp), col_fn(gn)
             rv = r[real_col].dropna()
