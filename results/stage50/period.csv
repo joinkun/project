@@ -1,0 +1,5 @@
+version,n_sources,changed_full,changed_train_rows,train_rows
+sub_all,57,18,72,228
+sub_trim,57,28,112,228
+t,57,24,96,228
+lognorm,57,43,172,228

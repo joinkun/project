@@ -1,0 +1,505 @@
+{
+  "judgment": {
+    "sub_all": {
+      "c2": {
+        "violations": 6,
+        "wins": 0,
+        "losses": 2,
+        "marks": [
+          -1,
+          -1,
+          0
+        ],
+        "ok": false
+      },
+      "c1": {
+        "violations": 2,
+        "wins": 1,
+        "losses": 1,
+        "marks": [
+          0,
+          -1,
+          1
+        ],
+        "ok": false
+      }
+    },
+    "sub_trim": {
+      "c2": {
+        "violations": 4,
+        "wins": 0,
+        "losses": 2,
+        "marks": [
+          -1,
+          -1,
+          0
+        ],
+        "ok": false
+      },
+      "c1": {
+        "violations": 0,
+        "wins": 1,
+        "losses": 1,
+        "marks": [
+          0,
+          -1,
+          1
+        ],
+        "ok": false
+      }
+    },
+    "t": {
+      "c2": {
+        "violations": 6,
+        "wins": 0,
+        "losses": 2,
+        "marks": [
+          -1,
+          -1,
+          0
+        ],
+        "ok": false
+      },
+      "c1": {
+        "violations": 2,
+        "wins": 2,
+        "losses": 1,
+        "marks": [
+          1,
+          -1,
+          1
+        ],
+        "ok": false
+      }
+    },
+    "lognorm": {
+      "c2": {
+        "violations": 7,
+        "wins": 0,
+        "losses": 2,
+        "marks": [
+          -1,
+          -1,
+          0
+        ],
+        "ok": false
+      },
+      "c1": {
+        "violations": 2,
+        "wins": 1,
+        "losses": 1,
+        "marks": [
+          0,
+          -1,
+          1
+        ],
+        "ok": false
+      }
+    },
+    "t_unb": {
+      "c2": {
+        "violations": 11,
+        "wins": 0,
+        "losses": 2,
+        "marks": [
+          -1,
+          -1,
+          0
+        ],
+        "ok": false
+      },
+      "c1": {
+        "violations": 2,
+        "wins": 1,
+        "losses": 1,
+        "marks": [
+          0,
+          -1,
+          1
+        ],
+        "ok": false
+      }
+    },
+    "t_pi12": {
+      "c2": {
+        "violations": 6,
+        "wins": 0,
+        "losses": 2,
+        "marks": [
+          -1,
+          -1,
+          0
+        ],
+        "ok": false
+      },
+      "c1": {
+        "violations": 1,
+        "wins": 2,
+        "losses": 1,
+        "marks": [
+          1,
+          -1,
+          1
+        ],
+        "ok": false
+      }
+    }
+  },
+  "adopted": null,
+  "judgment_noinact": {
+    "equal_noinact": {
+      "c2": {
+        "violations": 121,
+        "wins": 0,
+        "losses": 0,
+        "marks": [
+          0,
+          0,
+          0
+        ],
+        "ok": false
+      },
+      "c1": {
+        "violations": 315,
+        "wins": 0,
+        "losses": 1,
+        "marks": [
+          -1,
+          0,
+          0
+        ],
+        "ok": false
+      }
+    },
+    "sub_all_noinact": {
+      "c2": {
+        "violations": 126,
+        "wins": 0,
+        "losses": 2,
+        "marks": [
+          -1,
+          -1,
+          0
+        ],
+        "ok": false
+      },
+      "c1": {
+        "violations": 317,
+        "wins": 1,
+        "losses": 1,
+        "marks": [
+          0,
+          -1,
+          1
+        ],
+        "ok": false
+      }
+    },
+    "sub_trim_noinact": {
+      "c2": {
+        "violations": 127,
+        "wins": 0,
+        "losses": 2,
+        "marks": [
+          -1,
+          -1,
+          0
+        ],
+        "ok": false
+      },
+      "c1": {
+        "violations": 315,
+        "wins": 1,
+        "losses": 1,
+        "marks": [
+          0,
+          -1,
+          1
+        ],
+        "ok": false
+      }
+    },
+    "t_noinact": {
+      "c2": {
+        "violations": 127,
+        "wins": 0,
+        "losses": 2,
+        "marks": [
+          -1,
+          -1,
+          0
+        ],
+        "ok": false
+      },
+      "c1": {
+        "violations": 317,
+        "wins": 2,
+        "losses": 1,
+        "marks": [
+          1,
+          -1,
+          1
+        ],
+        "ok": false
+      }
+    },
+    "lognorm_noinact": {
+      "c2": {
+        "violations": 130,
+        "wins": 0,
+        "losses": 2,
+        "marks": [
+          -1,
+          -1,
+          0
+        ],
+        "ok": false
+      },
+      "c1": {
+        "violations": 317,
+        "wins": 1,
+        "losses": 1,
+        "marks": [
+          0,
+          -1,
+          1
+        ],
+        "ok": false
+      }
+    },
+    "t_unb_noinact": {
+      "c2": {
+        "violations": 131,
+        "wins": 0,
+        "losses": 2,
+        "marks": [
+          -1,
+          -1,
+          0
+        ],
+        "ok": false
+      },
+      "c1": {
+        "violations": 317,
+        "wins": 1,
+        "losses": 1,
+        "marks": [
+          0,
+          -1,
+          1
+        ],
+        "ok": false
+      }
+    },
+    "t_pi12_noinact": {
+      "c2": {
+        "violations": 127,
+        "wins": 0,
+        "losses": 2,
+        "marks": [
+          -1,
+          -1,
+          0
+        ],
+        "ok": false
+      },
+      "c1": {
+        "violations": 316,
+        "wins": 2,
+        "losses": 1,
+        "marks": [
+          1,
+          -1,
+          1
+        ],
+        "ok": false
+      }
+    }
+  },
+  "targets": {
+    "equal": {
+      "changed": 0,
+      "unique": 42,
+      "paid_ratio": 0.8328462738534285,
+      "industry_match": 0.19298245614035087
+    },
+    "sub_all": {
+      "changed": 56,
+      "unique": 51,
+      "paid_ratio": 0.561281718076739,
+      "industry_match": 0.14035087719298245
+    },
+    "sub_trim": {
+      "changed": 54,
+      "unique": 48,
+      "paid_ratio": 0.6444065684597603,
+      "industry_match": 0.17543859649122806
+    },
+    "t": {
+      "changed": 56,
+      "unique": 52,
+      "paid_ratio": 0.33335702355993035,
+      "industry_match": 0.19298245614035087
+    },
+    "lognorm": {
+      "changed": 55,
+      "unique": 49,
+      "paid_ratio": 0.6691473894830788,
+      "industry_match": 0.2631578947368421
+    },
+    "t_unb": {
+      "changed": 56,
+      "unique": 57,
+      "paid_ratio": 0.331514585315592,
+      "industry_match": 0.17543859649122806
+    },
+    "t_pi12": {
+      "changed": 55,
+      "unique": 52,
+      "paid_ratio": 0.34956112181545707,
+      "industry_match": 0.22807017543859648
+    }
+  },
+  "zeros": {
+    "c2_equal": {
+      "ts_born": 0,
+      "ts_zero": 45,
+      "check15": 0
+    },
+    "c2_equal_noinact": {
+      "ts_born": 18,
+      "ts_zero": 45,
+      "check15": 121
+    },
+    "c2_sub_all": {
+      "ts_born": 0,
+      "ts_zero": 45,
+      "check15": 0
+    },
+    "c2_sub_all_noinact": {
+      "ts_born": 18,
+      "ts_zero": 45,
+      "check15": 120
+    },
+    "c2_sub_trim": {
+      "ts_born": 0,
+      "ts_zero": 45,
+      "check15": 0
+    },
+    "c2_sub_trim_noinact": {
+      "ts_born": 18,
+      "ts_zero": 45,
+      "check15": 123
+    },
+    "c2_t": {
+      "ts_born": 0,
+      "ts_zero": 45,
+      "check15": 0
+    },
+    "c2_t_noinact": {
+      "ts_born": 18,
+      "ts_zero": 45,
+      "check15": 121
+    },
+    "c2_lognorm": {
+      "ts_born": 0,
+      "ts_zero": 45,
+      "check15": 0
+    },
+    "c2_lognorm_noinact": {
+      "ts_born": 18,
+      "ts_zero": 45,
+      "check15": 123
+    },
+    "c2_t_unb": {
+      "ts_born": 0,
+      "ts_zero": 45,
+      "check15": 0
+    },
+    "c2_t_unb_noinact": {
+      "ts_born": 18,
+      "ts_zero": 45,
+      "check15": 120
+    },
+    "c2_t_pi12": {
+      "ts_born": 0,
+      "ts_zero": 45,
+      "check15": 0
+    },
+    "c2_t_pi12_noinact": {
+      "ts_born": 18,
+      "ts_zero": 45,
+      "check15": 121
+    },
+    "c1_equal": {
+      "ts_born": 0,
+      "ts_zero": 66,
+      "check15": 0
+    },
+    "c1_equal_noinact": {
+      "ts_born": 45,
+      "ts_zero": 66,
+      "check15": 315
+    },
+    "c1_sub_all": {
+      "ts_born": 0,
+      "ts_zero": 66,
+      "check15": 0
+    },
+    "c1_sub_all_noinact": {
+      "ts_born": 45,
+      "ts_zero": 66,
+      "check15": 315
+    },
+    "c1_sub_trim": {
+      "ts_born": 0,
+      "ts_zero": 66,
+      "check15": 0
+    },
+    "c1_sub_trim_noinact": {
+      "ts_born": 44,
+      "ts_zero": 66,
+      "check15": 315
+    },
+    "c1_t": {
+      "ts_born": 0,
+      "ts_zero": 66,
+      "check15": 0
+    },
+    "c1_t_noinact": {
+      "ts_born": 45,
+      "ts_zero": 66,
+      "check15": 315
+    },
+    "c1_lognorm": {
+      "ts_born": 0,
+      "ts_zero": 66,
+      "check15": 0
+    },
+    "c1_lognorm_noinact": {
+      "ts_born": 45,
+      "ts_zero": 66,
+      "check15": 315
+    },
+    "c1_t_unb": {
+      "ts_born": 0,
+      "ts_zero": 66,
+      "check15": 0
+    },
+    "c1_t_unb_noinact": {
+      "ts_born": 45,
+      "ts_zero": 66,
+      "check15": 315
+    },
+    "c1_t_pi12": {
+      "ts_born": 0,
+      "ts_zero": 66,
+      "check15": 0
+    },
+    "c1_t_pi12_noinact": {
+      "ts_born": 45,
+      "ts_zero": 66,
+      "check15": 315
+    }
+  }
+}
