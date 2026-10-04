@@ -38,7 +38,9 @@ METRICS = {"na": ("net_asset_improvement", "大", "純資産の改善"),
            "sparsity": ("sparsity", "小", "sparsity"),
            "validity": ("validity_lightgbm", "大", "validity"),
            "corr": ("", "大", "順位相関")}
-NEW = ("na", "res", "corr", "sparsity")
+SETS = {"v2": ("na", "res", "corr", "sparsity"),  # report_a.md の提案(criteria_v2.md §4)
+        "confirmed": ("na", "res", "corr")}  # ユーザーが確定した主指標(sparsity は副)
+NEW = SETS["v2"]
 
 
 def checks_upto(stage: int) -> tuple[str, ...]:
@@ -172,10 +174,16 @@ def sym(v: int) -> str:
 def main() -> None:  # noqa: PLR0915
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", type=Path, default=Path("results/stage51"))
+    ap.add_argument("--set", choices=tuple(SETS), default="v2",
+                    help="新規則の主指標の集合(confirmed は rejudge_confirmed.md に書く)")
     args = ap.parse_args()
+    global NEW
+    NEW = SETS[args.set]
+    suffix = "" if args.set == "v2" else f"_{args.set}"
     rng = np.random.default_rng(0)
-    lines = ["# ステージ51 A.4: 過去の判定の再検証(新しい主指標 v2)", "",
-             "新規則: 主指標 = 純資産の改善 ↑・解消率 ↑・順位相関 ↑・sparsity ↓ の 4 つ。"
+    lab_new = "・".join(METRICS[k][2] for k in NEW)
+    lines = [f"# ステージ51 A.4: 過去の判定の再検証(主指標 {args.set})", "",
+             f"新規則: 主指標 = {lab_new} の {len(NEW)} つ。"
              "2 つ以上で有意に優れ、有意に劣るものがなく、基準 1(違反 0)を満たせば勝ち"
              "(`criteria_v2.md`)。旧規則は各ステージの当時の主指標で、同じ「2 つ以上で優れ、劣"
              "るものがない」。"
@@ -237,7 +245,7 @@ def main() -> None:  # noqa: PLR0915
         cond = "両 class で成立" if st.both else "class 2 で成立(class 1 の出力なし)"
         lines += [f"**{cond}**", "", "| 比較 | 旧規則 | 新規則 | |", "|---|---|---|---|",
                   *both_lines, ""]
-    (args.out / "rejudge.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (args.out / f"rejudge{suffix}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     pd.DataFrame(det_rows).to_csv(args.out / "rejudge.csv", index=False)
     vdf = pd.DataFrame(vrows)
     vl = ["# ステージ51 B.2: 項目別の違反(行数)", "",
