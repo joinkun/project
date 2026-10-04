@@ -247,6 +247,10 @@ def main() -> None:  # noqa: PLR0915
                     help="方向制約を外す(自己株式の上限への統合の確認、ステージ44)")
     ap.add_argument("--inactive", default="none",
                     help="不活性制約: none / selected / all / カンマ区切りの科目(ステージ41)")
+    ap.add_argument("--targets", type=Path, default=None,
+                    help="ステージ51: 密度モデルの目標(npz、キー fold0〜4 = class 2 の始点の並"
+                         "びの総資産比)。"
+                         "指定すると輸送計画の代わりに使う")
     ap.add_argument("--allow-dropped-sources", action="store_true",
                     help="不均衡 OT で質量 0 になった訓練始点を許し、学習から除く(ステージ39)")
     ap.add_argument("--k", type=int, default=_K,
@@ -323,6 +327,13 @@ def main() -> None:  # noqa: PLR0915
         pool_idx = idx0 + [idx2[p] for p in train_pos]
         b = reduced_basis(c, x_tilde[pool_idx], args.k, args.basis)
         z0 = x0_tilde @ b
+        if args.targets is not None:  # ステージ51 D.4: 密度モデルの目標(固定の対、検証はテスト側)
+            tg = np.load(args.targets)[f"fold{k}"]
+            n_tr, n_te = len(train_pos), len(test_pos)
+            z0 = np.vstack([tg[train_pos], tg[test_pos]]) @ b
+            plan_train = np.hstack([np.eye(n_tr) / n_tr, np.zeros((n_tr, n_te))])
+            plan_test = np.hstack([np.zeros((n_te, n_tr)), np.eye(n_te) / n_te])
+            alive = np.ones(n_tr, dtype=bool)
         z_train, z_test = x2_tilde[train_pos] @ b, x2_tilde[test_pos] @ b
         # ステージ26: 種を設定してからネットワークを作る(seeded_velocity_field)。以前は
         # train_fm の中で初めて種を設定していたため、fold 0 の初期値だけが実行ごとに変わっていた。

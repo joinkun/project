@@ -91,6 +91,10 @@ def main() -> None:  # noqa: PLR0915
                     help="方向制約を外す(自己株式の上限への統合の確認、ステージ44)")
     ap.add_argument("--inactive", default="none",
                     help="不活性制約: none / selected / all / カンマ区切りの科目(ステージ41)")
+    ap.add_argument("--targets", type=Path, default=None,
+                    help="ステージ51: 密度モデルの目標(npz、キー full = class 2 の始点の並びの"
+                         "総資産比)。"
+                         "指定すると輸送計画の代わりに使う")
     ap.add_argument("--allow-dropped-sources", action="store_true",
                     help="不均衡 OT で質量 0 になった class 2 始点を許し、学習から除く(ステージ39)")
     args = ap.parse_args()
@@ -130,6 +134,13 @@ def main() -> None:  # noqa: PLR0915
     b = reduced_basis(c, x_tilde[idx0 + idx2], args.k, args.basis)  # ステージ44 A
     z0 = x_tilde[idx0] @ b
     z2 = x_tilde[idx2] @ b
+    if args.targets is not None:  # ステージ51 D.4: 密度モデルの目標(始点ごとに 1 点、固定の対)
+        tg = np.load(args.targets)["full"]
+        if tg.shape != (len(idx2), len(names)):
+            raise ValueError(f"目標の形 {tg.shape} が (class 2, 科目) と合わない")
+        z0 = tg @ b
+        plan = np.eye(len(idx2)) / len(idx2)
+        alive = np.ones(len(idx2), dtype=bool)
     net = seeded_velocity_field(args.seed * 1000 + _FULL_FOLD, dim=b.shape[1], hidden=_HIDDEN,
                                 n_layers=_N_LAYERS)
     tr = train_fm(z2[alive], z0, plan[alive], net, epochs=_EPOCHS, lr=_LR, seed=args.seed)
