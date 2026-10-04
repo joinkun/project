@@ -40,7 +40,13 @@ PRIMARY = (("net_asset_improvement", "大", "純資産の改善"),
            ("insolvency_resolved", "大", "解消率"))
 SECONDARY = (("sparsity", "小", "sparsity"), ("validity_lightgbm", "大", "validity"),
              ("proximity_l2", "小", "proximity"))
-PAIRS_F2 = (("k31_nn", "k13_nn", "最近傍での K の効果(2 対 1)"),
+BASE = "k13_nn"  # 比較の基準(ステージ52 は書き換えて使う)
+BS_ORDER = ("k13_dens", "k31_nn")  # 採用がないときの BS 表の設定(先にあるもの)
+OUT = {"comparison": "comparison_cd.md", "losses": "losses.md", "assets": "assets_extreme.md",
+       "bs": "bs_cd.md", "summary": "summary_cd.json"}
+STAGE = "ステージ51"
+TITLE = "ステージ51 E.1・F: K と目標の設定の比較"
+PAIRS_F2: tuple[tuple[str, str, str], ...] = (("k31_nn", "k13_nn", "最近傍での K の効果(2 対 1)"),
             ("k31_dens", "k13_dens", "密度モデルでの K の効果(4 対 3)"),
             ("k13_dens", "k13_nn", "K = 13 での目標の効果(3 対 1)"),
             ("k31_dens", "k31_nn", "K = 31 での目標の効果(4 対 2)"))
@@ -106,7 +112,7 @@ def wins(c: dict[str, tuple[float, ...]], nviol: int) -> tuple[bool, str]:
 
 
 def losses_section() -> list[str]:
-    lines = ["# ステージ51 C.2: 学習の状況(訓練損失と検証損失、class 2 の 5-fold)", "",
+    lines = [f"# {STAGE} C.2: 学習の状況(訓練損失と検証損失、class 2 の 5-fold)", "",
              "fold ごと・seed ごとの値の中央値 [範囲]。比 = 検証損失の最小 / 訓練損失の最小。"
              "過学習の兆候 = 50 epoch 目の検証損失が最小の 1.5 倍を超える(criteria_cd.md §3)。"
              "fold 0 は外れ値 2 社がテスト側にあり検証損失が大きい(ステージ44)ので、fold 1〜4 "
@@ -142,7 +148,7 @@ def assets_section(names: tuple[str, ...]) -> tuple[list[str], dict[str, Any]]:
     m = subtotal_members(spec, names)["jppfs_cor_Assets"]
     real = pd.read_csv("results/stage51/asset_change.csv")
     real = real[real["group"].str.startswith("再建群")]["d5_compound"].to_numpy()
-    lines = ["# ステージ51: 総資産の極端な変化(生成、t = 1 = 5 年)", "",
+    lines = [f"# {STAGE}: 総資産の極端な変化(生成、t = 1 = 5 年)", "",
              "企業ごとの seed 中央値の ΔA / A0。実データは再建群 72 社(class 2 → 回復 15 社 + cl"
              "ass 1 → "
              "class 0 57 社)の複利 5 年換算。範囲外 = 実データの p5〜p95 "
@@ -176,19 +182,19 @@ def bs_section(names: tuple[str, ...], best: str) -> list[str]:
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
     labels = load_labels(Path("conf/accounts/labels_ja.yaml"))
     gens = {}
-    for s in ("k13_nn", best):
+    for s in (BASE, best):
         (f,) = sorted((_GEN / "c2" / s).glob("*__seed0.parquet"))
         g = pd.read_parquet(f)
         gens[s] = g[g["method"] == "PCFM"].set_index("docID")
-    pool = sorted(set(gens["k13_nn"].index) - set(EXCL["c2"]))
+    pool = sorted(set(gens[BASE].index) - set(EXCL["c2"]))
     docs = [str(d) for d in np.random.default_rng(0).choice(pool, 5, replace=False)]
     x0c, x1c = [f"x0_{n}" for n in names], [f"x1_{n}" for n in names]
-    out = ["# ステージ51 E.4: BS 表(class 2、seed 0、百万円、t = 1 は 5 年)", "",
+    out = [f"# {STAGE} E.4: BS 表(class 2、seed 0、百万円、t = 1 は 5 年)", "",
            f"企業は外れ値を除く class 2(55 社)から乱数(seed 0)で選んだ 5 社。列は始点、設定 1("
            f"現行)、"
            f"{SETTINGS[best]} の終点。", ""]
     for d in docs:
-        r = gens["k13_nn"].loc[d]
+        r = gens[BASE].loc[d]
         cols = [("始点", r[x0c].to_numpy(float)), ("現行", r[x1c].to_numpy(float)),
                 (best, gens[best].loc[d][x1c].to_numpy(float))]
         bl = build_bs_lines(spec, names, [v * float(r["assets_start"]) for _, v in cols], labels)
@@ -214,7 +220,7 @@ def main() -> None:  # noqa: PLR0915
     names = state_vector_names(load_canonical_spec(Path("conf/accounts/core.yaml")),
                                include_subtotals=False)
     summary: dict[str, Any] = {}
-    lines = ["# ステージ51 E.1・F: K と目標の設定の比較", "",
+    lines = [f"# {TITLE}", "",
              "差は設定 1(K = 13・最近傍、現行)に対する企業単位のペアの差の中央値 [95% 区間]"
              "(順位相関は企業の同時復元抽出 1,000 回)。判定は 純資産の改善・解消率・順位相関 の順"
              "(+ 有意に優れる、− 有意に劣る、0 どちらでもない)。基準は `criteria_cd.md` §1。", ""]
@@ -232,13 +238,13 @@ def main() -> None:  # noqa: PLR0915
             ins = g[g["insolvent_start"].astype(bool)]
             nv = sum(cx.viol_items(s).values())
             cs = corr(cx.wide[s], cx.ref)
-            if s == "k13_nn":
+            if s == BASE:
                 lines.append(f"| {SETTINGS[s]} | {nv} |"
                              f" {g['net_asset_improvement'].median():.3f} | — "
                              f"| {int((ins['insolvency_resolved'] >= 2 / 3).sum())}/{len(ins)} "
                              f"| {cs:+.3f} | — | — | — |")
                 continue
-            c = cx.compare(s, "k13_nn", rng)
+            c = cx.compare(s, BASE, rng)
             ok, sym = wins(c, nv)
             judg.setdefault(s, {})[cls] = ok
             lines.append(
@@ -249,9 +255,9 @@ def main() -> None:  # noqa: PLR0915
         lines += ["", "### 副指標の差(対 設定 1)", "",
                   "| 設定 | sparsity | validity | proximity | 解消率 |", "|---|---|---|---|---|"]
         for s in sts:
-            if s == "k13_nn":
+            if s == BASE:
                 continue
-            c = cx.compare(s, "k13_nn", rng)
+            c = cx.compare(s, BASE, rng)
             lines.append(f"| {SETTINGS[s]} | " + " | ".join(
                 fc(c[k]) for k in ("sparsity", "validity", "proximity", "解消率")) + " |")
         lines += ["", "### 項目別の違反(行)", "",
@@ -291,16 +297,16 @@ def main() -> None:  # noqa: PLR0915
                          f"| {fc(c['解消率'])} | {fc(c['順位相関'])} "
                          f"| {fc(c['sparsity'])} | {sym} |")
     lines.append("")
-    (args.out / "comparison_cd.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    (args.out / "losses.md").write_text("\n".join(losses_section()) + "\n", encoding="utf-8")
+    (args.out / OUT["comparison"]).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (args.out / OUT["losses"]).write_text("\n".join(losses_section()) + "\n", encoding="utf-8")
     al, asum = assets_section(names)
-    (args.out / "assets_extreme.md").write_text("\n".join(al) + "\n", encoding="utf-8")
+    (args.out / OUT["assets"]).write_text("\n".join(al) + "\n", encoding="utf-8")
     summary["assets"] = asum
     # E.4: 採用された設定、なければ設定 3、それもなければ設定 2(criteria_cd.md §8、§4 で 3 が未実
     # 施の場合)
-    best = passed[0] if passed else next(s for s in ("k13_dens", "k31_nn") if s in available("c2"))
-    (args.out / "bs_cd.md").write_text("\n".join(bs_section(names, best)) + "\n", encoding="utf-8")
-    (args.out / "summary_cd.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2),
+    best = passed[0] if passed else next(s for s in BS_ORDER if s in available("c2"))
+    (args.out / OUT["bs"]).write_text("\n".join(bs_section(names, best)) + "\n", encoding="utf-8")
+    (args.out / OUT["summary"]).write_text(json.dumps(summary, ensure_ascii=False, indent=2),
                                              encoding="utf-8")
     print("\n".join(lines))
 
