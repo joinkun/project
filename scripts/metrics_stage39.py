@@ -123,6 +123,8 @@ def main() -> None:
     args.out.mkdir(parents=True, exist_ok=True)
     real_refs(names).to_parquet(args.out / "refs.parquet", index=False)
     for cls in ("c2", "c1"):
+        if not (args.gen_dir / cls).is_dir():  # ステージ51: class 2 だけの再評価
+            continue
         rows, viols, dels = [], [], []
         for sdir in sorted(p for p in (args.gen_dir / cls).iterdir() if p.is_dir()):
             g, tag = load_gen(sdir)
