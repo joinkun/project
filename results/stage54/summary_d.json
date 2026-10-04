@@ -1,0 +1,12 @@
+{
+  "verdict": "採用しない",
+  "power_na": 0.8405,
+  "power_na_c1dist": 1.0,
+  "corr_half": 0.07171369495582874,
+  "corr_c1": 0.044289253116341284,
+  "underpowered": [
+    "順位相関"
+  ],
+  "ok_c1": true,
+  "ok_c2": false
+}

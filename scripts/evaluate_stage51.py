@@ -41,7 +41,7 @@ PRIMARY = (("net_asset_improvement", "大", "純資産の改善"),
 SECONDARY = (("sparsity", "小", "sparsity"), ("validity_lightgbm", "大", "validity"),
              ("proximity_l2", "小", "proximity"))
 BASE = "k13_nn"  # 比較の基準(ステージ52 は書き換えて使う)
-BS_ORDER = ("k13_dens", "k31_nn")  # 採用がないときの BS 表の設定(先にあるもの)
+BS_ORDER: tuple[str, ...] = ("k13_dens", "k31_nn")  # 採用がないときの BS 表の設定(先にあるもの)
 OUT = {"comparison": "comparison_cd.md", "losses": "losses.md", "assets": "assets_extreme.md",
        "bs": "bs_cd.md", "summary": "summary_cd.json"}
 STAGE = "ステージ51"
