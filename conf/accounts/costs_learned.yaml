@@ -1,0 +1,135 @@
+# ステージ55: scripts/learn_stage55.py が生成(手で編集しない)。
+name: costs_learned
+basis_costs:
+- name: __OTHER__jppfs_cor_Assets
+  cost_increase: 0.9985228284258658
+  cost_decrease: 0.9985228284258658
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: inventories
+  cost_increase: 0.3448889190757262
+  cost_decrease: 0.3448889190757262
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: receivables_trade
+  cost_increase: 1.0015225709117916
+  cost_decrease: 1.0015225709117916
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: jppfs_cor_CashAndDeposits
+  cost_increase: 0.0
+  cost_decrease: 0.0
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: jppfs_cor_OtherCA
+  cost_increase: 1.4560774654690796
+  cost_decrease: 1.4560774654690796
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: allowance_doubtful_current
+  cost_increase: 1.6058548573527818
+  cost_decrease: 1.6058548573527818
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: __OTHER__jppfs_cor_CurrentAssets
+  cost_increase: 0.0
+  cost_decrease: 0.0
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: jppfs_cor_PropertyPlantAndEquipment
+  cost_increase: 0.0
+  cost_decrease: 0.0
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: jppfs_cor_IntangibleAssets
+  cost_increase: 2.006369201705113
+  cost_decrease: 2.006369201705113
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: jppfs_cor_InvestmentsAndOtherAssets
+  cost_increase: 0.0
+  cost_decrease: 0.0
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: allowance_doubtful_noncurrent
+  cost_increase: 1.1737678962387026
+  cost_decrease: 1.1737678962387026
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: __OTHER__jppfs_cor_NoncurrentAssets
+  cost_increase: 1.000048880022474
+  cost_decrease: 1.000048880022474
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: short_term_loans
+  cost_increase: 0.0
+  cost_decrease: 0.0
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: jppfs_cor_IncomeTaxesPayable
+  cost_increase: 1.1154635636245227
+  cost_decrease: 1.1154635636245227
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: jppfs_cor_OtherCL
+  cost_increase: 2.1664063584343505
+  cost_decrease: 2.1664063584343505
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: payables_trade
+  cost_increase: 4.278372704471702
+  cost_decrease: 4.278372704471702
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: accounts_payable_other
+  cost_increase: 3.411419933063939
+  cost_decrease: 3.411419933063939
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: bonds_current
+  cost_increase: 0.0
+  cost_decrease: 0.0
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: __OTHER__jppfs_cor_CurrentLiabilities
+  cost_increase: 2.681814888671206
+  cost_decrease: 2.681814888671206
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: __OTHER__jppfs_cor_Liabilities
+  cost_increase: 1.0000091347351165
+  cost_decrease: 1.0000091347351165
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: long_term_loans
+  cost_increase: 0.0
+  cost_decrease: 0.0
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: bonds_noncurrent
+  cost_increase: 1.7758829570965202
+  cost_decrease: 1.7758829570965202
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: __OTHER__jppfs_cor_NoncurrentLiabilities
+  cost_increase: 5.650371742766466
+  cost_decrease: 5.650371742766466
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: non_controlling_interests
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 等重み(ベースライン)
+- name: __OTHER__jppfs_cor_NetAssets
+  cost_increase: 1.0181622559783106
+  cost_decrease: 1.0181622559783106
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: jppfs_cor_RetainedEarnings
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 等重み(ベースライン)
+- name: jppfs_cor_CapitalStock
+  cost_increase: 0.0
+  cost_decrease: 0.0
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: jppfs_cor_CapitalSurplus
+  cost_increase: 0.0
+  cost_decrease: 0.0
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: jppfs_cor_TreasuryStock
+  cost_increase: 2.939270588894758
+  cost_decrease: 2.939270588894758
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: __OTHER__jppfs_cor_ShareholdersEquity
+  cost_increase: 0.9999997098548986
+  cost_decrease: 0.9999997098548986
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+- name: valuation_difference_securities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 等重み(ベースライン)
+- name: __OTHER__jppfs_cor_ValuationAndTranslationAdjustments
+  cost_increase: 1.5583866583396833
+  cost_decrease: 1.5583866583396833
+  source: 'ステージ55: 再建群 72 社の遷移から学習(triplet、近い企業の負例)'
+non_actionable:
+- jppfs_cor_RetainedEarnings
+- valuation_difference_securities
+- non_controlling_interests
