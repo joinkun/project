@@ -254,6 +254,10 @@ def main() -> None:  # noqa: PLR0915
                     help="方向制約を外す(自己株式の上限への統合の確認、ステージ44)")
     ap.add_argument("--inactive", default="none",
                     help="不活性制約: none / selected / all / カンマ区切りの科目(ステージ41)")
+    ap.add_argument("--n-steps", type=int, default=1,
+                    help="ステージ57: Euler 法のステップ数(1 = 現行。各点を独立に射影する)")
+    ap.add_argument("--save-path", action="store_true",
+                    help="ステージ57: 経路の全点(射影前・射影後)を npz に保存する")
     ap.add_argument("--targets", type=Path, default=None,
                     help="ステージ51: 密度モデルの目標(npz、キー fold0〜4 = class 2 の始点の並"
                          "びの総資産比)。"
@@ -301,6 +305,8 @@ def main() -> None:  # noqa: PLR0915
 
     rows: list[dict[str, float | int | str]] = []
     loss_log: dict[str, dict[str, object]] = {}
+    saved: dict[str, np.ndarray] = {}
+    t_gen = time.perf_counter()
 
     def add(config: str, method: str, k: int, p: int, path: np.ndarray, status: str,
             active: str, re_branch: int = -1, n_inactive: int = 0) -> None:
@@ -355,7 +361,8 @@ def main() -> None:  # noqa: PLR0915
         loss_log[str(k)] = {"train": tr.train_losses, "val": tr.val_losses,
                             "dim": int(b.shape[1])}
         z_start = x2_tilde[test_pos] @ b
-        z_path = euler_sample_batch(net, z_start, _TS)
+        ts = tuple(np.linspace(0.0, 1.0, args.n_steps + 1)) if args.n_steps > 1 else _TS
+        z_path = euler_sample_batch(net, z_start, ts)
         raw = x2_tilde[test_pos][:, None, :] + np.einsum(
             "dk,ntk->ntd", b, z_path - z_start[:, None, :]
         )
@@ -394,12 +401,20 @@ def main() -> None:  # noqa: PLR0915
                 except InfeasibleProjectionError:
                     out = np.repeat(x_start[None, :], out.shape[0], axis=0)  # 動かせない
                     status = "infeasible"
+                if args.save_path:  # ステージ57: 経路の全点(射影前・射影後)
+                    saved[f"{doc2[p]}__{cname}__raw"] = raw[i_local]
+                    saved[f"{doc2[p]}__{cname}__proj"] = out
                 add(cname, "PCFM", k, int(p), out, status, active, branch, len(inactive))
         print(f"  [{tag}] fold {k + 1}/{args.n_folds} 完了({time.perf_counter() - t0:.0f}s)",
               flush=True)
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     out_path = args.out_dir / f"{tag}.parquet"
+    elapsed = time.perf_counter() - t_gen
+    print(f"[{tag}] 学習・積分・射影の時間 {elapsed:.1f} 秒(n_steps = {args.n_steps})", flush=True)
+    if args.save_path:
+        np.savez_compressed(args.out_dir / f"{tag}__paths.npz", elapsed=np.array(elapsed),
+                            **saved)  # type: ignore[arg-type]
     if args.loss_log:  # ステージ44 A: fold ごとの訓練・検証損失(epoch ごと)
         (args.out_dir / f"{tag}__losses.json").write_text(json.dumps(loss_log), encoding="utf-8")
     pd.DataFrame(rows).to_parquet(out_path, index=False)

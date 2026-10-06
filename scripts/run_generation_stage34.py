@@ -20,6 +20,7 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 import argparse  # noqa: E402
 import json  # noqa: E402
+import time  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 import numpy as np  # noqa: E402
@@ -91,6 +92,10 @@ def main() -> None:  # noqa: PLR0915
                     help="方向制約を外す(自己株式の上限への統合の確認、ステージ44)")
     ap.add_argument("--inactive", default="none",
                     help="不活性制約: none / selected / all / カンマ区切りの科目(ステージ41)")
+    ap.add_argument("--n-steps", type=int, default=1,
+                    help="ステージ57: Euler 法のステップ数(1 = 現行。各点を独立に射影する)")
+    ap.add_argument("--save-path", action="store_true",
+                    help="ステージ57: 経路の全点(射影前・射影後)を npz に保存する")
     ap.add_argument("--targets", type=Path, default=None,
                     help="ステージ51: 密度モデルの目標(npz、キー full = class 2 の始点の並びの"
                          "総資産比)。"
@@ -146,8 +151,11 @@ def main() -> None:  # noqa: PLR0915
     tr = train_fm(z2[alive], z0, plan[alive], net, epochs=_EPOCHS, lr=_LR, seed=args.seed)
     x1s = x_tilde[idx1]
     z_start = x1s @ b
-    z_path = euler_sample_batch(net, z_start, _TS)
+    ts = tuple(np.linspace(0.0, 1.0, args.n_steps + 1)) if args.n_steps > 1 else _TS
+    t_gen = time.perf_counter()
+    z_path = euler_sample_batch(net, z_start, ts)
     raw = x1s[:, None, :] + np.einsum("dk,ntk->ntd", b, z_path - z_start[:, None, :])
+    saved: dict[str, np.ndarray] = {}
 
     ones = np.ones(dim)
     rows: list[dict[str, float | int | str]] = []
@@ -168,6 +176,9 @@ def main() -> None:  # noqa: PLR0915
         except InfeasibleProjectionError:
             out = np.repeat(x_start[None, :], out.shape[0], axis=0)
             status = "infeasible"
+        if args.save_path:  # ステージ57: 経路の全点(射影前・射影後)
+            saved[f"{doc_ids[i]}__raw"] = raw[j]
+            saved[f"{doc_ids[i]}__proj"] = out
         for method, path in (("FM", raw[j]), ("PCFM", out)):
             transfer, profit = decompose_re_change(path[0], path[-1], names)
             row: dict[str, float | int | str] = {
@@ -184,6 +195,13 @@ def main() -> None:  # noqa: PLR0915
             rows.append(row)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     out_path = args.out_dir / f"{args.tag}__seed{args.seed}.parquet"
+    elapsed = time.perf_counter() - t_gen
+    print(f"[class1 seed{args.seed}] 積分と射影の時間 {elapsed:.1f} 秒(n_steps = {args.n_steps})",
+          flush=True)
+    if args.save_path:
+        np.savez_compressed(args.out_dir / f"{args.tag}__seed{args.seed}__paths.npz",
+                            ts=np.array(ts), elapsed=np.array(elapsed),
+                            **saved)  # type: ignore[arg-type]
     if args.loss_log:  # ステージ44 A: class 1 は検証用の分割がないので訓練損失だけ
         (args.out_dir / f"{args.tag}__seed{args.seed}__losses.json").write_text(
             json.dumps({"full": {"train": tr.train_losses, "val": tr.val_losses,

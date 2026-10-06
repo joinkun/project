@@ -1,0 +1,135 @@
+# ステージ57: scripts/changes_stage57.py が生成(手で編集しない)。非操作科目は nearest_na0 で 0。
+name: costs_recovery
+basis_costs:
+- name: __OTHER__jppfs_cor_Assets
+  cost_increase: 100.0
+  cost_decrease: 100.0
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: inventories
+  cost_increase: 2.382347851582567
+  cost_decrease: 2.382347851582567
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: receivables_trade
+  cost_increase: 2.653364036701678
+  cost_decrease: 2.653364036701678
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: jppfs_cor_CashAndDeposits
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: jppfs_cor_OtherCA
+  cost_increase: 7.691714083867153
+  cost_decrease: 7.691714083867153
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: allowance_doubtful_current
+  cost_increase: 100.0
+  cost_decrease: 100.0
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: __OTHER__jppfs_cor_CurrentAssets
+  cost_increase: 2.207509511280005
+  cost_decrease: 2.207509511280005
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: jppfs_cor_PropertyPlantAndEquipment
+  cost_increase: 1.081268415834601
+  cost_decrease: 1.081268415834601
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: jppfs_cor_IntangibleAssets
+  cost_increase: 4.591572139582263
+  cost_decrease: 4.591572139582263
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: jppfs_cor_InvestmentsAndOtherAssets
+  cost_increase: 0.9195352677230768
+  cost_decrease: 0.9195352677230768
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: allowance_doubtful_noncurrent
+  cost_increase: 11.006810688856179
+  cost_decrease: 11.006810688856179
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: __OTHER__jppfs_cor_NoncurrentAssets
+  cost_increase: 100.0
+  cost_decrease: 100.0
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: short_term_loans
+  cost_increase: 1.2410701593291107
+  cost_decrease: 1.2410701593291107
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: jppfs_cor_IncomeTaxesPayable
+  cost_increase: 12.504600443499639
+  cost_decrease: 12.504600443499639
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: jppfs_cor_OtherCL
+  cost_increase: 8.019685749492977
+  cost_decrease: 8.019685749492977
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: payables_trade
+  cost_increase: 3.8831573239109396
+  cost_decrease: 3.8831573239109396
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: accounts_payable_other
+  cost_increase: 6.020942964951991
+  cost_decrease: 6.020942964951991
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: bonds_current
+  cost_increase: 2.978843131711265
+  cost_decrease: 2.978843131711265
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: __OTHER__jppfs_cor_CurrentLiabilities
+  cost_increase: 3.2735241300301405
+  cost_decrease: 3.2735241300301405
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: __OTHER__jppfs_cor_Liabilities
+  cost_increase: 100.0
+  cost_decrease: 100.0
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: long_term_loans
+  cost_increase: 1.041694095627308
+  cost_decrease: 1.041694095627308
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: bonds_noncurrent
+  cost_increase: 56.03270667916892
+  cost_decrease: 56.03270667916892
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: __OTHER__jppfs_cor_NoncurrentLiabilities
+  cost_increase: 3.607787314126826
+  cost_decrease: 3.607787314126826
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: non_controlling_interests
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: __OTHER__jppfs_cor_NetAssets
+  cost_increase: 36.407980302757906
+  cost_decrease: 36.407980302757906
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: jppfs_cor_RetainedEarnings
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: jppfs_cor_CapitalStock
+  cost_increase: 1.592313357671649
+  cost_decrease: 1.592313357671649
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: jppfs_cor_CapitalSurplus
+  cost_increase: 1.0022338043459804
+  cost_decrease: 1.0022338043459804
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: jppfs_cor_TreasuryStock
+  cost_increase: 29.438842514497686
+  cost_decrease: 29.438842514497686
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: __OTHER__jppfs_cor_ShareholdersEquity
+  cost_increase: 100.0
+  cost_decrease: 100.0
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: valuation_difference_securities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+- name: __OTHER__jppfs_cor_ValuationAndTranslationAdjustments
+  cost_increase: 10.376679876646495
+  cost_decrease: 10.376679876646495
+  source: 'ステージ57: 再建群 72 社の |Δ/A| の平均から(方向なし)'
+non_actionable:
+- jppfs_cor_RetainedEarnings
+- valuation_difference_securities
+- non_controlling_interests

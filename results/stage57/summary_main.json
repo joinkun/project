@@ -1,0 +1,21 @@
+{
+  "judge": {
+    "s4_rec_k31": {
+      "c2": false,
+      "c1": false
+    },
+    "s4d_recdir_k31": {
+      "c2": false,
+      "c1": false
+    },
+    "s3_rec_k13": {
+      "c2": false,
+      "c1": false
+    },
+    "s3d_recdir_k13": {
+      "c2": false,
+      "c1": true
+    }
+  },
+  "best": "s1_equal_k13"
+}
