@@ -232,6 +232,9 @@ class PlausibilityConfig:
     treasury_cap: bool = False
     # ステージ46: α を資本金だけに課す(False は資本金と資本剰余金の両方、ステージ43 以前の定義)
     capital_stock_only: bool = False
+    # ステージ56: 払込資本(資本金 + 資本剰余金)の合計の下限 θ。合計 >= θ × 始点(始点が 0 以下なら
+    # 始点の値まで緩める)。資本金と資本剰余金の間の振替は自由
+    paid_in_floor: float | None = None
     label: str = field(default="S0", compare=False)
 
 
@@ -386,6 +389,13 @@ def build_linear_constraints(
             a[idx[nm]] = 1.0
             x0 = float(x_start[idx[nm]])
             out.append(LinearConstraint(f"{nm}>={alpha:g}*start", a, alpha * x0 if x0 >= 0 else x0))
+    if cfg.paid_in_floor is not None:
+        a = np.zeros(len(names))
+        a[idx[_CAPITAL_STOCK]] = 1.0
+        a[idx[_CAPITAL_SURPLUS]] = 1.0
+        p0 = float(a @ x_start)
+        theta = float(cfg.paid_in_floor)
+        out.append(LinearConstraint(f"paid_in>={theta:g}*start", a, theta * p0 if p0 > 0 else p0))
     if cfg.residual_nonneg:
         for nm in residual_nonneg_accounts(names):
             a = np.zeros(len(names))

@@ -1,0 +1,43 @@
+{
+  "results": {
+    "equal": {
+      "c2": {
+        "down_share": 0.8181818181818182,
+        "crit2": false,
+        "cs_zero": 0
+      },
+      "c1": {
+        "down_share": 0.8320610687022901,
+        "crit2": false,
+        "cs_zero": 1
+      }
+    },
+    "theta": {
+      "c2": {
+        "down_share": 0.8181818181818182,
+        "crit2": false,
+        "cs_zero": 0
+      },
+      "c1": {
+        "down_share": 0.8320610687022901,
+        "crit2": false,
+        "cs_zero": 1
+      },
+      "pass": false
+    },
+    "theta_noalpha": {
+      "c2": {
+        "down_share": 0.8181818181818182,
+        "crit2": false,
+        "cs_zero": 11
+      },
+      "c1": {
+        "down_share": 0.8320610687022901,
+        "crit2": false,
+        "cs_zero": 20
+      },
+      "pass": false
+    }
+  },
+  "adopted": null
+}

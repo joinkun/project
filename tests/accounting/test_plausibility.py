@@ -90,6 +90,27 @@ def test_net_assets_non_deterioration_and_capital_floor() -> None:
     assert x[_IDX["jppfs_cor_CapitalStock"]] >= 0.5 * x0[_IDX["jppfs_cor_CapitalStock"]] - 1e-7
 
 
+def test_paid_in_floor_limits_total_but_allows_transfer() -> None:
+    """ステージ56: 払込資本の合計に下限 θ。資本金から資本剰余金への振替は自由。"""
+    x0 = _start()
+    cs, csur = _IDX["jppfs_cor_CapitalStock"], _IDX["jppfs_cor_CapitalSurplus"]
+    p0 = x0[cs] + x0[csur]
+    cfg = PlausibilityConfig(paid_in_floor=0.5)
+    extra = build_linear_constraints(_SPEC, _NAMES, x0, cfg)
+    assert [c.name for c in extra] == ["paid_in>=0.5*start"]
+    y = x0.copy()  # 払込資本を 9 割減らし、その分を現金から引く(恒等式は保つ)
+    y[cs] *= 0.1
+    y[csur] *= 0.1
+    y[_IDX["jppfs_cor_CashAndDeposits"]] -= 0.9 * p0
+    x, _ = project_onto_feasible(y, _SPEC, x_start=x0, extra_constraints=extra)
+    assert x[cs] + x[csur] >= 0.5 * p0 - 1e-7
+    z = x0.copy()  # 資本金を資本剰余金へ全額振り替える(合計は不変)は動かさずに通る
+    z[csur] += z[cs]
+    z[cs] = 0.0
+    xz, _ = project_onto_feasible(z, _SPEC, x_start=x0, extra_constraints=extra)
+    np.testing.assert_allclose(xz, z, atol=1e-7)
+
+
 def test_contradictory_constraints_raise_infeasible() -> None:
     x0 = _start()
     m = subtotal_members(_SPEC, _NAMES)
