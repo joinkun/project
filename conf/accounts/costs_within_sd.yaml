@@ -1,0 +1,135 @@
+# ステージ58: scripts/variance_stage58.py が生成(手で編集しない)。非操作科目は nearest_na0 で 0。
+name: costs_within_sd
+basis_costs:
+- name: __OTHER__jppfs_cor_Assets
+  cost_increase: 100.0
+  cost_decrease: 100.0
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: inventories
+  cost_increase: 2.15572004204176
+  cost_decrease: 2.15572004204176
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: receivables_trade
+  cost_increase: 4.713794663442847
+  cost_decrease: 4.713794663442847
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: jppfs_cor_CashAndDeposits
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: jppfs_cor_OtherCA
+  cost_increase: 46.15625549604523
+  cost_decrease: 46.15625549604523
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: allowance_doubtful_current
+  cost_increase: 25.40045097234165
+  cost_decrease: 25.40045097234165
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: __OTHER__jppfs_cor_CurrentAssets
+  cost_increase: 4.897970295671368
+  cost_decrease: 4.897970295671368
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: jppfs_cor_PropertyPlantAndEquipment
+  cost_increase: 0.7599385419389563
+  cost_decrease: 0.7599385419389563
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: jppfs_cor_IntangibleAssets
+  cost_increase: 11.455834484619785
+  cost_decrease: 11.455834484619785
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: jppfs_cor_InvestmentsAndOtherAssets
+  cost_increase: 0.9879603596459855
+  cost_decrease: 0.9879603596459855
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: allowance_doubtful_noncurrent
+  cost_increase: 2.268166524347357
+  cost_decrease: 2.268166524347357
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: __OTHER__jppfs_cor_NoncurrentAssets
+  cost_increase: 100.0
+  cost_decrease: 100.0
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: short_term_loans
+  cost_increase: 0.6104114390128589
+  cost_decrease: 0.6104114390128589
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: jppfs_cor_IncomeTaxesPayable
+  cost_increase: 73.85222185250663
+  cost_decrease: 73.85222185250663
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: jppfs_cor_OtherCL
+  cost_increase: 14.347437535988862
+  cost_decrease: 14.347437535988862
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: payables_trade
+  cost_increase: 11.632911512766276
+  cost_decrease: 11.632911512766276
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: accounts_payable_other
+  cost_increase: 15.503170435080147
+  cost_decrease: 15.503170435080147
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: bonds_current
+  cost_increase: 3.9282679363455872
+  cost_decrease: 3.9282679363455872
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: __OTHER__jppfs_cor_CurrentLiabilities
+  cost_increase: 3.868047712179349
+  cost_decrease: 3.868047712179349
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: __OTHER__jppfs_cor_Liabilities
+  cost_increase: 100.0
+  cost_decrease: 100.0
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: long_term_loans
+  cost_increase: 0.5736331419759341
+  cost_decrease: 0.5736331419759341
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: bonds_noncurrent
+  cost_increase: 100.0
+  cost_decrease: 100.0
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: __OTHER__jppfs_cor_NoncurrentLiabilities
+  cost_increase: 5.204751899497405
+  cost_decrease: 5.204751899497405
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: non_controlling_interests
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: __OTHER__jppfs_cor_NetAssets
+  cost_increase: 100.0
+  cost_decrease: 100.0
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: jppfs_cor_RetainedEarnings
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: jppfs_cor_CapitalStock
+  cost_increase: 0.31812597575277657
+  cost_decrease: 0.31812597575277657
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: jppfs_cor_CapitalSurplus
+  cost_increase: 0.15325624635741625
+  cost_decrease: 0.15325624635741625
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: jppfs_cor_TreasuryStock
+  cost_increase: 35.78734725937264
+  cost_decrease: 35.78734725937264
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: __OTHER__jppfs_cor_ShareholdersEquity
+  cost_increase: 100.0
+  cost_decrease: 100.0
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: valuation_difference_securities
+  cost_increase: 1.0
+  cost_decrease: 1.0
+  source: 'ステージ58: σ(案 2)による標準化'
+- name: __OTHER__jppfs_cor_ValuationAndTranslationAdjustments
+  cost_increase: 52.48431937923799
+  cost_decrease: 52.48431937923799
+  source: 'ステージ58: σ(案 2)による標準化'
+non_actionable:
+- jppfs_cor_RetainedEarnings
+- valuation_difference_securities
+- non_controlling_interests

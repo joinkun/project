@@ -41,6 +41,9 @@ PRIMARY = (("net_asset_improvement", "大", "純資産の改善"),
 SECONDARY = (("sparsity", "小", "sparsity"), ("validity_lightgbm", "大", "validity"),
              ("proximity_l2", "小", "proximity"))
 BASE = "k13_nn"  # 比較の基準(ステージ52 は書き換えて使う)
+BASE_DESC = "設定 1(K = 13・最近傍、現行)"  # 見出しでの基準の説明(BASE と合わせて書き換える)
+CRITERIA = "`criteria_cd.md` §1"
+BASE_COL = "現行"  # BS 表での基準の列名
 BS_ORDER: tuple[str, ...] = ("k13_dens", "k31_nn")  # 採用がないときの BS 表の設定(先にあるもの)
 OUT = {"comparison": "comparison_cd.md", "losses": "losses.md", "assets": "assets_extreme.md",
        "bs": "bs_cd.md", "summary": "summary_cd.json"}
@@ -190,12 +193,12 @@ def bs_section(names: tuple[str, ...], best: str) -> list[str]:
     docs = [str(d) for d in np.random.default_rng(0).choice(pool, 5, replace=False)]
     x0c, x1c = [f"x0_{n}" for n in names], [f"x1_{n}" for n in names]
     out = [f"# {STAGE} E.4: BS 表(class 2、seed 0、百万円、t = 1 は 5 年)", "",
-           f"企業は外れ値を除く class 2(55 社)から乱数(seed 0)で選んだ 5 社。列は始点、設定 1("
-           f"現行)、"
+           "企業は外れ値を除く class 2(55 社)から乱数(seed 0)で選んだ 5 社。"
+           f"列は始点、{BASE_DESC}、"
            f"{SETTINGS[best]} の終点。", ""]
     for d in docs:
         r = gens[BASE].loc[d]
-        cols = [("始点", r[x0c].to_numpy(float)), ("現行", r[x1c].to_numpy(float)),
+        cols = [("始点", r[x0c].to_numpy(float)), (BASE_COL, r[x1c].to_numpy(float)),
                 (best, gens[best].loc[d][x1c].to_numpy(float))]
         bl = build_bs_lines(spec, names, [v * float(r["assets_start"]) for _, v in cols], labels)
         out += [f"## {r['filerName']}({d})", "",
@@ -221,9 +224,9 @@ def main() -> None:  # noqa: PLR0915
                                include_subtotals=False)
     summary: dict[str, Any] = {}
     lines = [f"# {TITLE}", "",
-             "差は設定 1(K = 13・最近傍、現行)に対する企業単位のペアの差の中央値 [95% 区間]"
+             f"差は{BASE_DESC}に対する企業単位のペアの差の中央値 [95% 区間]"
              "(順位相関は企業の同時復元抽出 1,000 回)。判定は 純資産の改善・解消率・順位相関 の順"
-             "(+ 有意に優れる、− 有意に劣る、0 どちらでもない)。基準は `criteria_cd.md` §1。", ""]
+             f"(+ 有意に優れる、− 有意に劣る、0 どちらでもない)。基準は {CRITERIA}。", ""]
     judg: dict[str, dict[str, bool]] = {}
     ctxs = {cls: Ctx(cls, names) for cls in ("c2", "c1")}
     for cls in ("c2", "c1"):

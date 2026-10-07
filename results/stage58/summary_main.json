@@ -1,0 +1,41 @@
+{
+  "judge": {
+    "s2_sd": {
+      "c2": false,
+      "c1": false
+    },
+    "s3_mad": {
+      "c2": false,
+      "c1": false
+    },
+    "s4_class": {
+      "c2": false,
+      "c1": false
+    }
+  },
+  "judge_vs_k13": {},
+  "passed": [],
+  "final": [],
+  "order": {
+    "s2_sd": false,
+    "s4_class": false
+  },
+  "down": {
+    "c2": {
+      "s0_equal_k13": 0.8181818181818182,
+      "s1_equal_k31": 0.8909090909090909,
+      "s2_sd": 1.0,
+      "s3_mad": 0.9818181818181818,
+      "s4_class": 1.0,
+      "s5_total": 1.0
+    },
+    "c1": {
+      "s0_equal_k13": 0.8359375,
+      "s1_equal_k31": 0.8203125,
+      "s2_sd": 1.0,
+      "s3_mad": 0.9921875,
+      "s4_class": 1.0,
+      "s5_total": 1.0
+    }
+  }
+}
