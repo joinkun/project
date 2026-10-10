@@ -293,6 +293,65 @@ def solve_unbalanced_normalized(
     return plan
 
 
+def solve_semi_unbalanced_normalized(
+    cost_normalized: np.ndarray,
+    a: np.ndarray,
+    b: np.ndarray,
+    epsilon: float,
+    tau1: float,
+    *,
+    max_iter: int = 200000,
+    tol: float = 1e-9,
+    marginal_tol: float = DEFAULT_MARGINAL_TOL,
+) -> OtResult:
+    """始点側を厳密に保存し(τ0 = ∞)、目標側だけ KL で緩める不均衡OT(対数領域、ステージ60)。
+
+    ``<P,C> + ε·KL(P|a⊗b) + τ1·KL(Pᵀ1|b)``、``P1 = a``。反復は
+    ``log u = log a − LSE_j(log K + log v)``、``log v = φ1 (log b − LSE_i(log K + log u))``
+    (φ1 = τ1 / (τ1 + ε)、log K = −C/ε + log a + log b)。行の和は u の更新で毎回厳密に a になる。
+    v に定数 c を足すと u が −c ずれて計画は変わらない。この方向は φ1 の速さでしか減らない
+    (τ1 が大きいと非常に遅い)ので、収束は v の更新量の幅(最大 − 最小)で判定する。
+    τ1 → 0 で目標側の制約が消え、各行が独立に exp(−C/ε) で重みを付ける形になる。
+    未収束、非有限、行の周辺の誤差、質量 0 の行は例外。
+    """
+    from scipy.special import logsumexp
+
+    if tau1 <= 0 or epsilon <= 0:
+        raise ValueError("tau1 と epsilon は正")
+    phi = tau1 / (tau1 + epsilon)
+    log_a, log_b = np.log(a), np.log(b)
+    log_k = -cost_normalized / epsilon + log_a[:, None] + log_b[None, :]
+    log_u = np.zeros(len(a))
+    log_v = np.zeros(len(b))
+    delta = float("inf")
+    n_iter = 0
+    for _ in range(max_iter):
+        n_iter += 1
+        new_u = log_a - logsumexp(log_k + log_v[None, :], axis=1)
+        new_v = phi * (log_b - logsumexp(log_k + new_u[:, None], axis=0))
+        dv = new_v - log_v
+        delta = float(dv.max() - dv.min())  # 定数のずれ(計画を変えない)を除いた更新量
+        log_u, log_v = new_u, new_v
+        if delta < tol:
+            break
+    else:
+        raise SolverNotConvergedError(
+            f"片側不均衡Sinkhorn(対数領域)が{max_iter}反復で収束しない: 最終更新量={delta:.3e}"
+        )
+    log_u = log_a - logsumexp(log_k + log_v[None, :], axis=1)  # 最後の v に合わせて行を厳密に
+    plan: np.ndarray = np.exp(log_u[:, None] + log_k + log_v[None, :])
+    row_error = float(np.max(np.abs(plan.sum(axis=1) - a)))
+    n_zero = int(np.sum(plan.sum(axis=1) < 1e-12))
+    finite = bool(np.isfinite(plan).all())
+    if not finite or row_error >= marginal_tol or n_zero > 0:
+        raise SolverNotConvergedError(
+            f"片側不均衡OTの計画が不健全: 行の誤差={row_error:.3e}、質量0の行={n_zero}、"
+            f"有限={finite}"
+        )
+    return OtResult(plan=plan, max_marginal_error=row_error, n_zero_mass_rows=0, converged=True,
+                    n_checkpoints=n_iter, final_error=delta)
+
+
 def plan_entropy(plan: np.ndarray) -> float:
     """輸送計画全体のエントロピー。0に近いほど決定的(1対1に近い)、
     大きいほど独立結合(周辺分布の積、つまり全始点が全終点に均等に

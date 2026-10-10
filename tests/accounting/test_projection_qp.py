@@ -162,3 +162,26 @@ def test_apply_projection_endpoint_only_leaves_early_t_unprojected() -> None:
     for i in range(2):
         feasible, violations = is_feasible(x_proj[i, -1], _SPEC, tol=1e-4)
         assert feasible, violations
+
+
+def test_l1_move_zero_lambda_matches_plain_projection() -> None:
+    y = np.array([-50.0, 30.0, -10.0, -90.0])
+    x0 = _feasible_point(cash=100.0, stl=30.0, treasury=-10.0)
+    plain, _ = project_onto_feasible(y, _SPEC, x_start=x0)
+    moved, info = project_onto_feasible(y, _SPEC, x_start=x0,
+                                        l1_move=(np.ones(4), np.ones(4), 0.0))
+    assert np.allclose(plain, moved, atol=1e-4)
+    assert info.move_up is not None and info.move_down is not None
+
+
+def test_l1_move_parts_are_complementary_and_large_lambda_stays_at_start() -> None:
+    x0 = _feasible_point(cash=100.0, stl=30.0, treasury=-10.0)
+    y = _feasible_point(cash=60.0, stl=10.0, treasury=-5.0)
+    c_plus, c_minus = np.array([1.0, 2.0, 1.0, 0.5]), np.array([3.0, 1.0, 1.0, 0.5])
+    small, info = project_onto_feasible(y, _SPEC, x_start=x0, l1_move=(c_plus, c_minus, 0.01))
+    assert info.move_up is not None and info.move_down is not None
+    assert np.minimum(info.move_up, info.move_down).max() < 1e-6  # 同時に正にならない
+    assert np.allclose(info.move_up - info.move_down, small - x0, atol=1e-4)
+    big, _ = project_onto_feasible(y, _SPEC, x_start=x0, l1_move=(c_plus, c_minus, 1e4))
+    assert np.allclose(big, x0, atol=1e-3)  # 動かす代償が大きければ始点に留まる
+    assert np.linalg.norm(small - y) < np.linalg.norm(big - y)

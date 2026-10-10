@@ -67,6 +67,9 @@ class ProjectionInfo:
     max_constraint_violation: float  # 解いた後の制約違反の最大値(数値誤差レベルのはず)
     solve_time_seconds: float
     active_constraints: tuple[str, ...] = ()  # 拘束(スラック≈0)している追加制約の名前
+    # ステージ60: L1 の移動コストを足したときの増加分 u と減少分 v(元の単位)。なければ None
+    move_up: np.ndarray | None = None
+    move_down: np.ndarray | None = None
 
 
 def _default_weights(x_start: np.ndarray, assets: float) -> np.ndarray:
@@ -118,6 +121,7 @@ def project_onto_feasible(
     solver: str | None = None,
     strict: bool = True,
     extra_constraints: tuple[LinearConstraint, ...] = (),
+    l1_move: tuple[np.ndarray, np.ndarray, float] | None = None,
 ) -> tuple[np.ndarray, ProjectionInfo]:
     """y を実行可能集合 C_i(x_start に基づく方向制約込み)へ射影する。
 
@@ -168,6 +172,11 @@ def project_onto_feasible(
     変数では ``(a/sqrt(w))·u >= rhs/scale`` として課す。実行可能集合が空なら
     ``InfeasibleProjectionError``(``SolverNotConvergedError``の子)。
     拘束している制約の名前は ``ProjectionInfo.active_constraints`` に入る。
+
+    **L1 の移動コスト(ステージ60)**: ``l1_move = (c_plus, c_minus, lam)`` なら、目的関数に
+    ``lam · Σ_a (c_plus[a]·u_a + c_minus[a]·v_a)``、``x − x_start = u − v``、``u, v ≥ 0`` を足す
+    (``min Σ w (x − y)² + lam Σ (c⁺u + c⁻v)``)。スケーリング後の問題では lam / scale を掛けるので、
+    lam の意味は元の単位のまま。u・v は ``ProjectionInfo.move_up``・``move_down`` に入る。
 
     ``solver``(ステージ10.6 §1.5の独立ソルバ検算専用): Noneなら既定の
     OSQP(失敗時ECOSへフォールバック)。明示的に指定すると(例: "ECOS",
@@ -235,6 +244,18 @@ def project_onto_feasible(
         a_u = lc.a / sqrt_w if whiten else lc.a
         constraints.append(a_u @ u >= lc.rhs / scale)
 
+    up: cp.Variable | None = None
+    down: cp.Variable | None = None
+    if l1_move is not None:
+        c_plus, c_minus, lam = l1_move
+        if lam < 0 or np.any(c_plus < 0) or np.any(c_minus < 0):
+            raise ValueError("l1_move の係数は非負")
+        up, down = cp.Variable(dim, nonneg=True), cp.Variable(dim, nonneg=True)
+        x_s_expr = cp.multiply(1.0 / sqrt_w, u) if whiten else u
+        constraints.append(x_s_expr - x_start_s == up - down)
+        objective = cp.Minimize(objective.args[0]
+                                + (lam / scale) * (c_plus @ up + c_minus @ down))
+
     prob = cp.Problem(objective, constraints)
     start = time.perf_counter()
     if solver is not None:
@@ -281,12 +302,18 @@ def project_onto_feasible(
                 f"射影解の制約違反が大きい: {max_violation:.3e} (scale={scale:.3e})"
             )
 
+    move_up = (np.asarray(up.value, dtype=float) * scale
+               if up is not None and up.value is not None else None)
+    move_down = (np.asarray(down.value, dtype=float) * scale
+                 if down is not None and down.value is not None else None)
     info = ProjectionInfo(
         status=str(prob.status),
         distance_before_after=float(np.linalg.norm(x_result - y)),
         max_constraint_violation=max_violation,
         solve_time_seconds=elapsed,
         active_constraints=tuple(active),
+        move_up=move_up,
+        move_down=move_down,
     )
     return x_result, info
 

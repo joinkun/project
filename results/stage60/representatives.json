@@ -1,0 +1,54 @@
+{
+ "c2": {
+  "links": {
+   "nn__bary": "nn__bary",
+   "nn_l2__bary": "nn_l2__bary",
+   "bal__bary": "bal_e0.005__bary",
+   "bal__argmax": "bal_e0.005__argmax",
+   "rep_A__bary": "semi_t0.01_e0.005__bary",
+   "rep_A__argmax": "semi_t0.01_e0.005__argmax",
+   "rep_B__bary": "sub550_s0_e0.005__bary",
+   "rep_B__argmax": "sub550_s0_e0.005__argmax",
+   "rep_B3__bary": "knn20_e0.005__bary",
+   "ref_C__bary": "w5_e0.005__bary",
+   "B_seed0__bary": "sub550_s0_e0.005__bary",
+   "B_seed1__bary": "sub550_s1_e0.005__bary",
+   "B_seed2__bary": "sub550_s2_e0.005__bary",
+   "B_seed3__bary": "sub550_s3_e0.005__bary",
+   "B_seed4__bary": "sub550_s4_e0.005__bary"
+  },
+  "rep": {
+   "A": "semi_t0.01_e0.005",
+   "B": "sub550_s0_e0.005",
+   "B3": "knn20_e0.005",
+   "C": null,
+   "C_ref": "w5_e0.005"
+  }
+ },
+ "c1": {
+  "links": {
+   "nn__bary": "nn__bary",
+   "nn_l2__bary": "nn_l2__bary",
+   "bal__bary": "bal_e0.005__bary",
+   "bal__argmax": "bal_e0.005__argmax",
+   "rep_A__bary": "semi_t0.1_e0.005__bary",
+   "rep_A__argmax": "semi_t0.1_e0.005__argmax",
+   "rep_B__bary": "sub1100_s0_e0.005__bary",
+   "rep_B__argmax": "sub1100_s0_e0.005__argmax",
+   "rep_B3__bary": "knn8_e0.005__bary",
+   "ref_C__bary": "w5_e0.005__bary",
+   "B_seed0__bary": "sub1100_s0_e0.005__bary",
+   "B_seed1__bary": "sub1100_s1_e0.005__bary",
+   "B_seed2__bary": "sub1100_s2_e0.005__bary",
+   "B_seed3__bary": "sub1100_s3_e0.005__bary",
+   "B_seed4__bary": "sub1100_s4_e0.005__bary"
+  },
+  "rep": {
+   "A": "semi_t0.1_e0.005",
+   "B": "sub1100_s0_e0.005",
+   "B3": "knn8_e0.005",
+   "C": null,
+   "C_ref": "w5_e0.005"
+  }
+ }
+}

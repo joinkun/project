@@ -201,3 +201,39 @@ def test_paths_to_state_vectors_scales_displacement_by_assets() -> None:
     x_paths = paths_to_state_vectors(z_paths, z_anchor, x_anchor, b, assets)
     assert np.allclose(x_paths[0], [1.0, 1.0, 0.0, 0.0])
     assert np.allclose(x_paths[1], [10.0, 10.0, 0.0, 0.0])
+
+
+def test_semi_unbalanced_preserves_rows_and_relaxes_columns() -> None:
+    from fsgen.models.transport import solve_semi_unbalanced_normalized
+
+    rng = np.random.default_rng(0)
+    cost = rng.uniform(0.0, 2.0, size=(5, 40))
+    a, b = np.full(5, 0.2), np.full(40, 1.0 / 40)
+    res = solve_semi_unbalanced_normalized(cost, a, b, epsilon=0.05, tau1=0.01)
+    assert np.allclose(res.plan.sum(axis=1), a, atol=1e-8)  # 始点側は厳密
+    assert np.abs(res.plan.sum(axis=0) - b).max() > 1e-3  # 目標側は緩む
+    # 目標側を緩めると、各行は最安の列に寄る(バランスの下限 n1/n0 = 8 を割る)
+    from fsgen.models.transport import effective_support_sizes
+
+    assert np.median(effective_support_sizes(res.plan)) < 8.0
+
+
+def test_semi_unbalanced_large_tau_approaches_balanced() -> None:
+    from fsgen.models.transport import solve_ot_normalized, solve_semi_unbalanced_normalized
+
+    rng = np.random.default_rng(1)
+    cost = rng.uniform(0.0, 1.0, size=(4, 12))
+    a, b = np.full(4, 0.25), np.full(12, 1.0 / 12)
+    semi = solve_semi_unbalanced_normalized(cost, a, b, epsilon=0.1, tau1=1e4).plan
+    bal = solve_ot_normalized(cost, a, b, 0.1).plan
+    assert np.abs(semi - bal).max() < 1e-3
+
+
+def test_semi_unbalanced_rejects_nonpositive_parameters() -> None:
+    import pytest
+
+    from fsgen.models.transport import solve_semi_unbalanced_normalized
+
+    with pytest.raises(ValueError):
+        solve_semi_unbalanced_normalized(np.ones((2, 2)), np.full(2, 0.5), np.full(2, 0.5),
+                                         0.1, 0.0)
