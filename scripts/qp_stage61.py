@@ -58,6 +58,11 @@ def main() -> None:  # noqa: PLR0915
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--cls", choices=("c2", "c1"), required=True)
     ap.add_argument("--shard", default="0/1")
+    ap.add_argument("--dists", default=",".join(DISTS), help="距離(カンマ区切り)")
+    ap.add_argument("--m-file", type=Path, default=None,
+                    help="ステージ62: 第 1 項の重みの係数 m_a(JSON、科目 → m)。重みは w / m²")
+    ap.add_argument("--data", type=Path, default=DATA, help="生成の出力先(既定はステージ61)")
+    ap.add_argument("--out", type=Path, default=OUT, help="要約の出力先(既定はステージ61)")
     args = ap.parse_args()
     spec = load_canonical_spec(_CANONICAL)
     names = state_vector_names(spec, include_subtotals=False)
@@ -106,7 +111,10 @@ def main() -> None:  # noqa: PLR0915
     agg = agg.drop_duplicates("docID").set_index("docID")
     lab_df = pd.read_csv("data/interim/labels/labels.csv", dtype={"docID": str})
     filer = lab_df.drop_duplicates("docID").set_index("docID")["filerName"]
-    jobs = [(d, lt) for d in DISTS for lt in LAMS]
+    if args.m_file is not None:  # λ のスケール s は base の w で計算したまま(ステージ62 §2)
+        mm = json.loads(args.m_file.read_text(encoding="utf-8"))
+        w = w / np.array([float(mm.get(n, 1.0)) for n in names]) ** 2
+    jobs = [(d, lt) for d in args.dists.split(",") for lt in LAMS]
     i_sh, n_sh = (int(v) for v in args.shard.split("/"))
     jobs = jobs[i_sh::n_sh]
     print(f"[{args.cls}] {len(src)} 社、s = {scale}、{len(jobs)} 組", flush=True)
@@ -162,7 +170,7 @@ def main() -> None:  # noqa: PLR0915
                             "reason": str(e)})
             print(f"  {name}: 失敗 {e}", flush=True)
             continue
-        out_dir = DATA / "gen" / args.cls / name
+        out_dir = args.data / "gen" / args.cls / name
         out_dir.mkdir(parents=True, exist_ok=True)
         df = pd.DataFrame(rows)
         for seed in (0, 1, 2):
@@ -174,12 +182,12 @@ def main() -> None:  # noqa: PLR0915
                         "move_cost_med": float(np.median(move_t)),
                         "seconds": round(time.perf_counter() - t0, 1)})
         print(f"  {name}: {stat} 不可能 {n_inf} ({time.perf_counter() - t0:.0f}s)", flush=True)
-    OUT.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(summary).to_csv(OUT / f"qp_{args.cls}_{i_sh}of{n_sh}.csv", index=False)
+    args.out.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(summary).to_csv(args.out / f"qp_{args.cls}_{i_sh}of{n_sh}.csv", index=False)
     targets = {d: np.array(tau[d]) for d in DISTS}
-    np.savez_compressed(DATA / f"targets_{args.cls}.npz", source_docs=np.array(src),
+    np.savez_compressed(args.data / f"targets_{args.cls}.npz", source_docs=np.array(src),
                         **targets)  # type: ignore[arg-type]
-    (DATA / f"scale_{args.cls}.json").write_text(json.dumps(scale), encoding="utf-8")
+    (args.data / f"scale_{args.cls}.json").write_text(json.dumps(scale), encoding="utf-8")
 
 
 if __name__ == "__main__":
