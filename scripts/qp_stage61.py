@@ -64,6 +64,9 @@ def main() -> None:  # noqa: PLR0915
                     help="ステージ62: 第 1 項の重みの係数 m_a(JSON、科目 → m)。重みは w / m²")
     ap.add_argument("--data", type=Path, default=DATA, help="生成の出力先(既定はステージ61)")
     ap.add_argument("--out", type=Path, default=OUT, help="要約の出力先(既定はステージ61)")
+    ap.add_argument("--tau-file", type=Path, default=None,
+                    help="ステージ64: 非対称 L1(l1a)の目標をこの npz で置き換える")
+    ap.add_argument("--tau-key", default="", help="--tau-file のキー(argmax の添字か重心)")
     ap.add_argument("--cash-floor", type=float, default=None,
                     help="ステージ63: 現金の下限 β_cash(現金(t) >= β_cash × 現金(0))")
     args = ap.parse_args()
@@ -98,6 +101,13 @@ def main() -> None:  # noqa: PLR0915
            "l1s": xt[l1_cost(xs, xt, cs, cs).argmin(axis=1)],
            "l1a": xt[l1_cost(xs, xt, cp, cm).argmin(axis=1)]}
 
+    if args.tau_file is not None:  # ステージ64: 輸送計画から作った目標(同じ始点の並び)
+        z = np.load(args.tau_file, allow_pickle=True)
+        if [str(v) for v in z["source_docs"]] != [str(v) for v in src]:
+            raise ValueError("--tau-file の始点の並びが一致しない")
+        v = z[args.tau_key]
+        tau["l1a"] = xt[v.astype(int)] if v.ndim == 1 else np.asarray(v, dtype=float)
+
     def move(d: str, delta: np.ndarray) -> np.ndarray:
         if d == "l2":
             out: np.ndarray = (act * delta ** 2).sum(axis=-1)
@@ -112,6 +122,9 @@ def main() -> None:  # noqa: PLR0915
         first = (w * (tau[d] - xs) ** 2).sum(axis=1)
         m = move(d, tau[d] - xs)
         scale[d] = float(np.median(first[m > 0] / m[m > 0]))
+    if args.tau_file is not None:  # 目標を置き換えても λ のスケールはステージ61 の値のまま
+        s61 = Path(f"data/interim/stage61/scale_{args.cls}.json")
+        scale = json.loads(s61.read_text(encoding="utf-8"))
     agg = pd.read_csv("data/interim/values/aggregated_core.csv", dtype={"docID": str})
     agg = agg.drop_duplicates("docID").set_index("docID")
     lab_df = pd.read_csv("data/interim/labels/labels.csv", dtype={"docID": str})

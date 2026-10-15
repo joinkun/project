@@ -1,0 +1,3 @@
+setting,dist,lam_tilde,lam,status,solver_status,n_infeasible,first_term_med,move_cost_med,seconds
+l1a_l0.1,l1a,0.1,0.03866021397069638,ok,"{""optimal"": 132}",0,0.701085335044504,29.407455421036047,21.7
+l1a_l10,l1a,10.0,3.8660213970696375,ok,"{""optimal"": 132}",0,12.26709908363972,0.23523932567689892,9.6
