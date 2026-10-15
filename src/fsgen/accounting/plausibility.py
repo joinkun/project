@@ -235,6 +235,9 @@ class PlausibilityConfig:
     # ステージ56: 払込資本(資本金 + 資本剰余金)の合計の下限 θ。合計 >= θ × 始点(始点が 0 以下なら
     # 始点の値まで緩める)。資本金と資本剰余金の間の振替は自由
     paid_in_floor: float | None = None
+    # ステージ63: 現金の下限 β_cash。現金(t) >= β_cash × 現金(0)(始点の現金が正のときだけ)。
+    # L1 の移動コストが現金を 0 まで使い切る端点解を塞ぐ
+    cash_floor: float | None = None
     label: str = field(default="S0", compare=False)
 
 
@@ -396,6 +399,12 @@ def build_linear_constraints(
         p0 = float(a @ x_start)
         theta = float(cfg.paid_in_floor)
         out.append(LinearConstraint(f"paid_in>={theta:g}*start", a, theta * p0 if p0 > 0 else p0))
+    if cfg.cash_floor is not None and x_start[idx[_CASH]] > 0:
+        a = np.zeros(len(names))
+        a[idx[_CASH]] = 1.0
+        beta_c = float(cfg.cash_floor)
+        out.append(LinearConstraint(f"cash>={beta_c:g}*start", a,
+                                    beta_c * float(x_start[idx[_CASH]])))
     if cfg.residual_nonneg:
         for nm in residual_nonneg_accounts(names):
             a = np.zeros(len(names))

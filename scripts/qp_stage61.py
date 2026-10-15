@@ -18,6 +18,7 @@ cvxpy のプロセスで、torch・ot・sklearn は import しない。規則は
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import time
 from pathlib import Path
@@ -63,10 +64,14 @@ def main() -> None:  # noqa: PLR0915
                     help="ステージ62: 第 1 項の重みの係数 m_a(JSON、科目 → m)。重みは w / m²")
     ap.add_argument("--data", type=Path, default=DATA, help="生成の出力先(既定はステージ61)")
     ap.add_argument("--out", type=Path, default=OUT, help="要約の出力先(既定はステージ61)")
+    ap.add_argument("--cash-floor", type=float, default=None,
+                    help="ステージ63: 現金の下限 β_cash(現金(t) >= β_cash × 現金(0))")
     args = ap.parse_args()
     spec = load_canonical_spec(_CANONICAL)
     names = state_vector_names(spec, include_subtotals=False)
     cfg = s47_final()
+    if args.cash_floor is not None:
+        cfg = dataclasses.replace(cfg, cash_floor=args.cash_floor)
     dcs = load_direction_constraints(_CANONICAL)
     na = load_cost_config(Path("conf/accounts/costs_equal.yaml")).non_actionable
     nact = np.array([n in set(na) for n in names])

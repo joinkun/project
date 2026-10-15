@@ -483,3 +483,21 @@ def test_treasury_cap_constraint_holds_after_projection() -> None:
     assert x[_IDX["jppfs_cor_TreasuryStock"]] >= -0.1 - 1e-7
     assert evaluate_checks(x0[None, :], y[None, :], _SPEC, _NAMES)[0, 7]
     assert not evaluate_checks(x0[None, :], x[None, :], _SPEC, _NAMES)[0, 7]
+
+
+def test_cash_floor_keeps_cash_above_fraction_of_start() -> None:
+    """ステージ63: 現金の下限 β_cash。使い切る点は下限まで戻し、始点の現金が 0 なら課さない。"""
+    x0 = _start()
+    ic = _IDX["jppfs_cor_CashAndDeposits"]
+    cfg = PlausibilityConfig(cash_floor=0.2)
+    extra = build_linear_constraints(_SPEC, _NAMES, x0, cfg)
+    assert [c.name for c in extra] == ["cash>=0.2*start"]
+    y = x0.copy()  # 現金を 0 にし、同額だけ短期借入金を返す(恒等式は保つ)
+    cash0 = x0[ic]
+    y[ic] = 0.0
+    y[_IDX["short_term_loans"]] -= cash0
+    x, _ = project_onto_feasible(y, _SPEC, x_start=x0, extra_constraints=extra)
+    assert x[ic] >= 0.2 * cash0 - 1e-7
+    z0 = x0.copy()
+    z0[ic] = 0.0
+    assert build_linear_constraints(_SPEC, _NAMES, z0, cfg) == ()
