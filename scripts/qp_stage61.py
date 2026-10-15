@@ -33,6 +33,7 @@ from scales_stage59 import DEFAULT, SCALES, scale_table
 from fsgen.accounting.constraints import load_canonical_spec, state_vector_names
 from fsgen.accounting.plausibility import (
     INACTIVE_ACCOUNTS,
+    PlausibilityConfig,
     build_linear_constraints,
     decompose_re_change,
     inactive_accounts,
@@ -67,6 +68,9 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--tau-file", type=Path, default=None,
                     help="ステージ64: 非対称 L1(l1a)の目標をこの npz で置き換える")
     ap.add_argument("--tau-key", default="", help="--tau-file のキー(argmax の添字か重心)")
+    ap.add_argument("--layer1-only", action="store_true",
+                    help="ステージ65: 第 1 層(恒等式・符号)だけ。第 2 層・方向・不活性・現金の"
+                         "下限を外す(非操作科目の凍結は手法の定義なので残す)")
     ap.add_argument("--cash-floor", type=float, default=None,
                     help="ステージ63: 現金の下限 β_cash(現金(t) >= β_cash × 現金(0))")
     args = ap.parse_args()
@@ -76,6 +80,11 @@ def main() -> None:  # noqa: PLR0915
     if args.cash_floor is not None:
         cfg = dataclasses.replace(cfg, cash_floor=args.cash_floor)
     dcs = load_direction_constraints(_CANONICAL)
+    if args.layer1_only:
+        if args.cash_floor is not None:
+            raise ValueError("--layer1-only と --cash-floor は同時に使わない")
+        cfg = PlausibilityConfig(label="layer1_only")
+        dcs = ()
     na = load_cost_config(Path("conf/accounts/costs_equal.yaml")).non_actionable
     nact = np.array([n in set(na) for n in names])
     act = (~nact).astype(float)
@@ -148,7 +157,8 @@ def main() -> None:  # noqa: PLR0915
         try:
             for i, doc in enumerate(src):
                 x0, t_i = xs[i], tau[d][i]
-                inactive = inactive_accounts(x0, names, INACTIVE_ACCOUNTS)
+                inactive = (() if args.layer1_only
+                            else inactive_accounts(x0, names, INACTIVE_ACCOUNTS))
                 frozen_i = frozen + tuple(a for a in inactive if a not in frozen)
                 extra = build_linear_constraints(spec, names, x0, cfg)
                 status, active = "ok", ""
