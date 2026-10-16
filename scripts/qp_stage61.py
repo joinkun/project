@@ -61,6 +61,7 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--cls", choices=("c2", "c1"), required=True)
     ap.add_argument("--shard", default="0/1")
     ap.add_argument("--dists", default=",".join(DISTS), help="距離(カンマ区切り)")
+    ap.add_argument("--lams", default="", help="λ̃(カンマ区切り、既定はグリッドの 10 点)")
     ap.add_argument("--m-file", type=Path, default=None,
                     help="ステージ62: 第 1 項の重みの係数 m_a(JSON、科目 → m)。重みは w / m²")
     ap.add_argument("--data", type=Path, default=DATA, help="生成の出力先(既定はステージ61)")
@@ -141,7 +142,8 @@ def main() -> None:  # noqa: PLR0915
     if args.m_file is not None:  # λ のスケール s は base の w で計算したまま(ステージ62 §2)
         mm = json.loads(args.m_file.read_text(encoding="utf-8"))
         w = w / np.array([float(mm.get(n, 1.0)) for n in names]) ** 2
-    jobs = [(d, lt) for d in args.dists.split(",") for lt in LAMS]
+    lam_list = [float(v) for v in args.lams.split(",")] if args.lams else list(LAMS)
+    jobs = [(d, lt) for d in args.dists.split(",") for lt in lam_list]
     i_sh, n_sh = (int(v) for v in args.shard.split("/"))
     jobs = jobs[i_sh::n_sh]
     print(f"[{args.cls}] {len(src)} 社、s = {scale}、{len(jobs)} 組", flush=True)
