@@ -149,34 +149,44 @@ class RecourseQP:
         self.prob = cp.Problem(cp.Minimize(obj), cons)
         self.n_fallback = 0  # CLARABEL 以外で最適解を得た回数
 
+    def _violation(self, y: np.ndarray) -> float:
+        viol = float(np.abs(y @ self.cmat).max()) if self.cmat.size else 0.0
+        for lc in self.extra:
+            viol = max(viol, float(lc.rhs - lc.a @ y))
+        return viol
+
     def solve(self, tau: np.ndarray) -> RecourseResult:
         rw = self.rw
         self.tau.value = tau
         self.tau_bs.value = np.sqrt(rw.w_bs[self.bs]) * tau[self.bs]
         self.na_tau.value = float(rw.na_coef @ tau)
-        status = "unsolved"
-        for name, kwargs in _SOLVERS:  # CLARABEL が失敗したら OSQP(高精度)、ECOS の順に解き直す
+        status, last_viol = "unsolved", float("nan")
+        tol = _VIOL_TOL * max(1.0, float(np.abs(self.x).max()))
+        y: np.ndarray | None = None
+        # CLARABEL で最適解でない・制約違反が許容を超える場合は、OSQP(高精度)、ECOS の順に解き直す
+        for name, kwargs in _SOLVERS:
             try:
                 self.prob.solve(solver=name, **kwargs)
             except cp.error.SolverError:
                 continue
             status = str(self.prob.status)
-            if status == "optimal":
+            if "infeasible" in status:
+                raise InfeasibleProjectionError(f"QP が実行不可能: {status}")
+            if status != "optimal" or self.z.value is None:
+                continue
+            cand = self.scale * np.asarray(self.z.value, dtype=float)
+            viol = self._violation(cand)
+            last_viol = viol
+            if viol <= tol:
+                y = cand
                 if name != cp.CLARABEL:
                     self.n_fallback += 1
                 break
-        if self.z.value is None:
-            if "infeasible" in status:
-                raise InfeasibleProjectionError(f"QP が実行不可能: {status}")
-            raise SolverNotConvergedError(f"QP の解が得られない: {status}")
-        if status != "optimal":
-            raise SolverNotConvergedError(f"QP が最適でない: {status}")
-        y = self.scale * np.asarray(self.z.value, dtype=float)
-        viol = float(np.abs(y @ self.cmat).max()) if self.cmat.size else 0.0
-        for lc in self.extra:
-            viol = max(viol, float(lc.rhs - lc.a @ y))
-        if viol > _VIOL_TOL * max(1.0, float(np.abs(self.x).max())):
-            raise SolverNotConvergedError(f"QP の解の制約違反が大きい: {viol:.3e}")
+        if y is None:
+            raise SolverNotConvergedError(
+                f"QP の解が得られない(状態 {status}、最後の制約違反 {last_viol:.3e}、"
+                f"許容 {tol:.1e})")
+        viol = self._violation(y)
         up = np.zeros(len(y))
         dn = np.zeros(len(y))
         up[self.mv] = np.asarray(self.ut.value) / rw.c_plus[self.mv]

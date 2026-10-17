@@ -21,9 +21,9 @@ import numpy as np
 import pandas as pd
 import yaml
 from changes_stage57 import deltas as nominal_deltas
-from density_stage51 import load_tilde
 from prep_stage59 import EPS0, N_MIN, OUTLIERS, deltas
 from qp_stage60 import s47_final
+from tilde_stage51 import load_tilde
 
 from fsgen.accounting.constraints import (
     build_constraint_matrix,
@@ -61,7 +61,8 @@ def main() -> None:  # noqa: PLR0915
              "s± = 変化した企業の |Δ| の中央値(正規化 Δx̃、2022 → 2024)、c± = 1 / (s± + ε0)、ε0 "
              "= 0.001。"
              "n < 5 の方向は反対の向きの s で代替。比較のため他の科目(ステージ60 の値)を並べる。"
-             "順位 = 操作できる 29 科目 + 利益剰余金の c の小さい順(1 = 最も動かしやすい)。", ""]
+             "順位 = 操作できる 29 科目 + 利益剰余金の c の小さい順(1 = 最も動かしやすい)。"
+             "凍結(…)は、凍結した科目に同じ規則を当てた値(B.2、生成には使わない)。", ""]
     for cls, grp in groups.items():
         codes = pairs[pairs["group"] == grp]["edinetCode"].tolist()
         d = deltas(codes, names)
@@ -86,8 +87,15 @@ def main() -> None:  # noqa: PLR0915
             k = names.index(n)
             a, b, s1, s2 = scale(d[:, k])
             if cp[k] == 0:
-                lines.append(f"| {ja.get(n, n)} | {a} | {b} | {s1:.4f} | {s2:.4f} | 0(凍結) | 0 "
-                             f"| — | — |")
+                # B.2: 凍結した科目にも同じ規則で c を推定する(生成には使わない)
+                if a < N_MIN and b >= N_MIN:
+                    s1 = s2
+                elif b < N_MIN and a >= N_MIN:
+                    s2 = s1
+                hp, hm = 1.0 / (s1 + EPS0), 1.0 / (s2 + EPS0)
+                lines.append(f"| {ja.get(n, n)} | {a} | {b} | {s1:.4f} | {s2:.4f} | 凍結({hp:.1f}) "
+                             f"| 凍結({hm:.1f}) | {hm / hp:.2f} | {int((allc < hp).sum()) + 1} / "
+                             f"{int((allc < hm).sum()) + 1} |")
                 continue
             rk_p = int((allc < cp[k]).sum()) + 1
             rk_m = int((allc < cm[k]).sum()) + 1

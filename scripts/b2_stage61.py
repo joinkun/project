@@ -25,8 +25,8 @@ from pathlib import Path  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import yaml  # noqa: E402
-from density_stage51 import load_tilde  # noqa: E402
 from scipy import stats  # noqa: E402
+from tilde_stage51 import load_tilde  # noqa: E402
 
 from fsgen.accounting.constraints import load_canonical_spec, state_vector_names  # noqa: E402
 from fsgen.evaluation.identification import identification_auc_repeated  # noqa: E402

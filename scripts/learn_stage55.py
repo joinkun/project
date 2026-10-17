@@ -22,11 +22,11 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import yaml
-from density_stage51 import load_tilde
 from scipy import stats
 from scipy.optimize import minimize
 from scipy.special import expit, log1p
 from sklearn.model_selection import KFold
+from tilde_stage51 import load_tilde
 
 from fsgen.accounting.constraints import load_canonical_spec, state_vector_names
 from fsgen.models.cost import load_cost_config

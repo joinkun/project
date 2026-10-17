@@ -20,10 +20,10 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.mixture import GaussianMixture
 from sklearn.model_selection import KFold
+from tilde_stage51 import load_tilde
 
 from fsgen.accounting.constraints import (
     build_constraint_matrix,
@@ -32,30 +32,12 @@ from fsgen.accounting.constraints import (
     state_vector_names,
 )
 from fsgen.accounting.subspace import build_reduced_basis
-from fsgen.datasets.exclusion import exclusion_masks, load_excluded_docs, subset_folds
+from fsgen.datasets.exclusion import subset_folds
 
-_AGG = Path("data/interim/values/aggregated_core.csv")
-_LABELS = Path("data/interim/labels/labels.csv")
 _FOLDS = Path("data/interim/industry_12/folds.npz")
-_EXCLUDE = Path("data/interim/stage28/excluded.csv")
 K_MAX = 10
 SEEDS = (0, 1, 2)
 MIN_WEIGHT = 0.01
-
-
-def load_tilde(names: tuple[str, ...]) -> tuple[np.ndarray, np.ndarray, list[str], np.ndarray]:
-    """``run_generation_stage16.load_dataset`` と同じ抽出(torch を読み込まないために複製)。"""
-    agg = pd.read_csv(_AGG, dtype={"docID": str})
-    agg = agg[(agg["parse_status"] == "ok") & (agg["is_financial"].astype(str) != "True")]
-    lab = pd.read_csv(_LABELS, dtype={"docID": str})
-    lab = lab[pd.to_numeric(lab["label"], errors="coerce").notna()]
-    m = agg.merge(lab[["docID", "filerName", "label"]], on="docID", how="inner")
-    m = m[m["total_assets"].notna() & (m["total_assets"] != 0)]
-    row_keep, src_keep = exclusion_masks(m["docID"].tolist(), m["label"].astype(int).tolist(),
-                                         load_excluded_docs(_EXCLUDE))
-    m = m[row_keep]
-    x = m[list(names)].fillna(0.0).to_numpy(dtype=float) / m["total_assets"].to_numpy()[:, None]
-    return x, m["label"].astype(int).to_numpy(), m["docID"].tolist(), src_keep
 
 
 class MFA:

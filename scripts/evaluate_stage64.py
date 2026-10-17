@@ -196,7 +196,7 @@ def main() -> None:  # noqa: PLR0915
         z = np.load(DATA / f"targets_{cls}.npz", allow_pickle=True)
         keys = {"t1_nn": "nn", "t2_bal": f"{reps[cls]['bal']}__argmax",
                 "t3_semi": f"{reps[cls]['semi']}__argmax", "t4_bary": f"{reps[cls]['bal']}__bary"}
-        x, lab, _d, _k = __import__("density_stage51").load_tilde(names)
+        x, lab, _d, _k = __import__("tilde_stage51").load_tilde(names)
         xt = x[lab == 0]
         pi = [names.index("jppfs_cor_CapitalStock"), names.index("jppfs_cor_CapitalSurplus")]
         for t, k in keys.items():

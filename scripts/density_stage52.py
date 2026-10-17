@@ -22,10 +22,10 @@ from typing import Any
 
 import numpy as np
 import yaml
-from density_stage51 import load_tilde
 from scipy import stats
 from sklearn.covariance import LedoitWolf
 from sklearn.model_selection import KFold
+from tilde_stage51 import load_tilde
 
 from fsgen.accounting.constraints import (
     build_constraint_matrix,

@@ -9,17 +9,26 @@ POT のプロセス(torch・sklearn・cvxpy を import しない)。設定 3〜5
 
 from __future__ import annotations
 
-import argparse
-import json
-from pathlib import Path
+import os
+import sys
 
-import numpy as np
-import pandas as pd
-from density_stage51 import load_tilde
-from prep_stage59 import OUTLIERS, l1_cost
+# POT の torch バックエンドと sklearn の読み込みを止める(precompute_transport.py と同じ。ステージ67)
+os.environ.setdefault("POT_BACKEND_DISABLE_PYTORCH", "1")
+sys.modules.setdefault("sklearn", None)  # type: ignore[arg-type]
+import argparse  # noqa: E402
+import json  # noqa: E402
+from pathlib import Path  # noqa: E402
 
-from fsgen.accounting.constraints import load_canonical_spec, state_vector_names
-from fsgen.models.transport import effective_support_sizes, solve_semi_unbalanced_normalized
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+from prep_stage59 import OUTLIERS, l1_cost  # noqa: E402
+from tilde_stage51 import load_tilde  # noqa: E402
+
+from fsgen.accounting.constraints import load_canonical_spec, state_vector_names  # noqa: E402
+from fsgen.models.transport import (  # noqa: E402
+    effective_support_sizes,
+    solve_semi_unbalanced_normalized,
+)
 
 DATA = Path("data/interim/stage66")
 

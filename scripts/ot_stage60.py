@@ -13,29 +13,35 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import time
-from collections.abc import Callable
-from pathlib import Path
+import os
+import sys
 
-import numpy as np
-import ot
-import pandas as pd
-from density_stage51 import load_tilde
-from prep_stage59 import OUTLIERS, deltas, l1_cost, l2_cost
-from sampling_stage60 import stratified
-from scales_stage59 import DEFAULT, SCALES, scale_table
+# POT の torch バックエンドと sklearn の読み込みを止める(precompute_transport.py と同じ。ステージ67)
+os.environ.setdefault("POT_BACKEND_DISABLE_PYTORCH", "1")
+sys.modules.setdefault("sklearn", None)  # type: ignore[arg-type]
+import argparse  # noqa: E402
+import json  # noqa: E402
+import time  # noqa: E402
+from collections.abc import Callable  # noqa: E402
+from pathlib import Path  # noqa: E402
 
-from fsgen.accounting.constraints import (
+import numpy as np  # noqa: E402
+import ot  # noqa: E402
+import pandas as pd  # noqa: E402
+from prep_stage59 import OUTLIERS, deltas, l1_cost, l2_cost  # noqa: E402
+from sampling_stage60 import stratified  # noqa: E402
+from scales_stage59 import DEFAULT, SCALES, scale_table  # noqa: E402
+from tilde_stage51 import load_tilde  # noqa: E402
+
+from fsgen.accounting.constraints import (  # noqa: E402
     build_constraint_matrix,
     load_canonical_spec,
     state_vector_names,
 )
-from fsgen.errors import SolverNotConvergedError
-from fsgen.models.cost import load_cost_config
-from fsgen.models.industry import load_industry_config
-from fsgen.models.transport import (
+from fsgen.errors import SolverNotConvergedError  # noqa: E402
+from fsgen.models.cost import load_cost_config  # noqa: E402
+from fsgen.models.industry import load_industry_config  # noqa: E402
+from fsgen.models.transport import (  # noqa: E402
     effective_support_sizes,
     solve_ot_normalized,
     solve_semi_unbalanced_normalized,

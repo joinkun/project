@@ -22,8 +22,8 @@ from typing import Any
 import evaluate_stage51 as e51
 import numpy as np
 import pandas as pd
-from density_stage51 import load_tilde
 from sampling_stage60 import stratified
+from tilde_stage51 import load_tilde
 
 from fsgen.accounting.constraints import load_canonical_spec, state_vector_names
 from fsgen.accounting.plausibility import subtotal_members
