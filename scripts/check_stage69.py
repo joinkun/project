@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-"""ステージ69 C.2: ``results/stage65/slides_numbers.md`` の数値が、``paper_tables.json``・``ver"
-  "ify.json``
-(ステージ69 の集計)と一致するかを照合する。数値を書式化して、スライドの文中に現れるかを調べる。
+"""ステージ69 C.2: ``slides_numbers.md`` の数値を、論文の表(ステージ69 の集計)と照合する。
+
+``results/stage65/slides_numbers.md`` の数値が ``paper_tables.json``・``verify.json`` と
+一致するかを、数値を書式化して、スライドの文中に現れるかで調べる。
 
 出力: ``results/stage69/consistency.md``。一致しない項目があれば終了コード 1。
 
@@ -41,6 +42,11 @@ def main() -> None:
         ("バランス OT の argmax class 2", f"**{m['balarg']['c2']['nai']:.3f}**"),
         ("等重み L2 class 1 純資産の改善の差", f"+{-vs['l2']['c1']['nai'][0]:.3f}"),
         ("等重み L2 class 1 順位相関の差", f"+{-vs['l2']['c1']['rho'][0]:.3f}"),
+        ("等重み L2 class 2 純資産の改善の差", f"+{-vs['l2']['c2']['nai'][0]:.3f} "
+                                          f"[+{-vs['l2']['c2']['nai'][2]:.3f}, "
+                                          f"+{-vs['l2']['c2']['nai'][1]:.3f}]"),
+        ("等重み L2 class 2 順位相関の差",
+         f"順位相関 +{-vs['l2']['c2']['rho'][0]:.3f}(有意でない)"),
         ("提案 AUC", f"{auc['c2']['prop'][0]:.2f} / {auc['c1']['prop'][0]:.2f}"),
         ("重心 AUC", f"{auc['c2']['bary'][0]:.3f} / {auc['c1']['bary'][0]:.3f}"),
         ("等重み L2 AUC", f"{auc['c2']['l2'][0]:.2f} / {auc['c1']['l2'][0]:.2f}"),

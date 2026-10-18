@@ -53,9 +53,9 @@ SETTINGS = {"s1r": ("full", "base", 0.0), "s2": ("full", "re", 0.0), "s3": ("hie
             "s4": ("full", "re", 1.0), "s5": ("hier", "re", 1.0)}
 
 
-def cpm(cls: str, kind: str) -> tuple[np.ndarray, np.ndarray]:
+def cpm(cls: str, kind: str, weights: Path | None = None) -> tuple[np.ndarray, np.ndarray]:
     path = (Path(f"data/interim/stage60/meta_{cls}.json") if kind == "base"
-            else DATA / f"weights_{cls}.json")
+            else weights if weights is not None else DATA / f"weights_{cls}.json")
     m = json.loads(path.read_text(encoding="utf-8"))
     return np.array(m["c_plus"]), np.array(m["c_minus"])
 
@@ -65,6 +65,11 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--cls", choices=("c2", "c1"), required=True)
     ap.add_argument("--setting", choices=tuple(SETTINGS), required=True)
     ap.add_argument("--shard", default="0/1")
+    ap.add_argument("--weights", type=Path, default=None,
+                    help="ステージ69.5: 利益剰余金にコストを与える設定の c± の JSON(既定はステ"
+                         "ージ67)")
+    ap.add_argument("--gen-root", type=Path, default=DATA / "gen", help="生成の出力先")
+    ap.add_argument("--qp-out", type=Path, default=OUT / "qp", help="要約の出力先")
     args = ap.parse_args()
     spec = load_canonical_spec(_CANONICAL)
     names = state_vector_names(spec, include_subtotals=False)
@@ -89,13 +94,13 @@ def main() -> None:  # noqa: PLR0915
         w_na = 1.0 / max(float(pooled_within((x @ na_coef)[:, None], lab)[0]), SIGMA_FLOOR) ** 2
     xt = x[lab == 0]
     m1 = sources("c1", x, lab, docs_a)
-    cp1, cm1 = cpm("c1", ckind)
+    cp1, cm1 = cpm("c1", ckind, args.weights)
     s = lam_scale(x[m1], targets("c1", [str(d) for d in docs_a[m1]], xt, "ot64"),
                   RecourseWeights(w_bs, na_coef, w_na, cp1, cm1, eta))
     mask = sources(args.cls, x, lab, docs_a)
     xs = x[mask]
     src = [str(d) for d in docs_a[mask]]
-    cp, cm = cpm(args.cls, ckind)
+    cp, cm = cpm(args.cls, ckind, args.weights if args.cls == "c1" else None)
     rw = RecourseWeights(w_bs, na_coef, w_na, cp, cm, eta)
     tau = targets(args.cls, src, xt, "ot64")
     agg = pd.read_csv("data/interim/values/aggregated_core.csv", dtype={"docID": str})
@@ -136,7 +141,7 @@ def main() -> None:  # noqa: PLR0915
                 row[f"x0_{n}"] = float(x0[j_])
                 row[f"x1_{n}"] = float(y[j_])
             rows.append(row)
-        out_dir = DATA / "gen" / args.cls / f"{args.setting}__l{lt:g}"
+        out_dir = args.gen_root / args.cls / f"{args.setting}__l{lt:g}"
         out_dir.mkdir(parents=True, exist_ok=True)
         df = pd.DataFrame(rows)
         for seed in (0, 1, 2):
@@ -147,8 +152,8 @@ def main() -> None:  # noqa: PLR0915
                         "seconds": round(time.perf_counter() - t0, 1)})
         print(f"  λ̃ = {lt:g}: 不可能 {n_infeas}、代替ソルバ {n_fb}"
               f"({time.perf_counter() - t0:.0f}s)", flush=True)
-    (OUT / "qp").mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(summary).to_csv(OUT / "qp" / f"{args.cls}_{args.setting}_{i_sh}of{n_sh}.csv",
+    args.qp_out.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(summary).to_csv(args.qp_out / f"{args.cls}_{args.setting}_{i_sh}of{n_sh}.csv",
                                  index=False)
 
 

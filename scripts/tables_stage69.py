@@ -2,8 +2,8 @@
 """ステージ69 A: 論文・発表用のマスター表(既存の生成と指標から集計するだけ。新しい生成はしない)。
 
 すべて class 1 で較正した λ(リークなし)の生成を使う。class 2 には class 1 の λ の絶対値を当てはめた
-生成だけを使い、存在しないもの(1-NN と等重み L2 の class 2)は空欄にして、近い格子点の値を
-参考に示す。
+生成だけを使う。1-NN と等重み L2 の class 2 は、ステージ69.5 で同じ規則で生成した
+(``results/stage69/run/run_695.sh``)。
 lightgbm・sklearn のプロセス(``metrics_stage39`` の出力を読む)。
 
 出力: ``results/stage69/paper_tables.md``・``paper_tables.json``。
@@ -52,14 +52,15 @@ S67 = (INTERIM / "stage67/metrics", INTERIM / "stage67/all")
 S68A = (INTERIM / "stage68/metrics_a", INTERIM / "stage68/all_a")
 S68 = (INTERIM / "stage68/metrics", INTERIM / "stage68/gen")
 S64 = (INTERIM / "stage64/metrics", INTERIM / "stage64/all")
+S695 = (INTERIM / "stage695/metrics", INTERIM / "stage695/all")
 # 手法 → class → 生成(None は class 1 の λ を当てはめた生成がない)
 CELLS: dict[str, dict[str, Src | None]] = {
     "prop": {"c2": Src(*S67, "s1__l1", "1"), "c1": Src(*S67, "s1__l1", "1")},
     "l1only": {"c2": Src(*S68A, "m2_l1only__l1", "1"), "c1": Src(*S65, "m2_l1only__l1", "1")},
     "bary": {"c2": Src(*S68A, "m7_bary__l3", "3"), "c1": Src(*S65, "m7_bary__l3", "3")},
     "balarg": {"c2": Src(*S68A, "m6_balarg__l30", "30"), "c1": Src(*S65, "m6_balarg__l30", "30")},
-    "nn": {"c2": None, "c1": Src(*S64, "t1_nn__l1a_l1", "1")},
-    "l2": {"c2": None, "c1": Src(*S65, "m3_l2__l10", "10")},
+    "nn": {"c2": Src(*S695, "nn__l1", "1"), "c1": Src(*S64, "t1_nn__l1a_l1", "1")},
+    "l2": {"c2": Src(*S695, "l2__l10", "10"), "c1": Src(*S65, "m3_l2__l10", "10")},
     "m1": {"c2": Src(*S68, "t0m1__l3", "3"), "c1": Src(*S68, "t0m1__l3", "3")},
     "rep": {"c2": Src(*S68, "t0m10__l1", "1"), "c1": Src(*S68, "t0m10__l1", "1")},
     "re": {"c2": Src(*S67, "s2__l1", "1"), "c1": Src(*S67, "s2__l1", "1")},
@@ -68,9 +69,6 @@ CELLS: dict[str, dict[str, Src | None]] = {
     "t2ref": {"c2": Src(*S68, "t2m1__l0.01", "0.01(参考、違反あり)"),
               "c1": Src(*S68, "t2m1__l0.01", "0.01(参考、違反あり)")},
 }
-# class 2 に class 1 の λ を当てはめた生成がないものの参考(近い格子点。λ の絶対値が違う)
-REF_C2 = {"nn": Src(*S64, "t1_nn__l1a_l1", "1(class 2 の格子、λ は class 1 の値の 0.92 倍)"),
-          "l2": Src(*S65, "m3_l2__l10", "10(class 2 の格子、λ は class 1 の値の 0.81 倍)")}
 _CTX: dict[tuple[Path, str], e51.Ctx] = {}
 
 
@@ -113,7 +111,11 @@ def metrics(src: Src, cls: str, names: tuple[str, ...], members: dict[str, np.nd
 
 def versus(a: Src, b: Src, cls: str, names: tuple[str, ...], rng: np.random.Generator
            ) -> dict[str, Any]:
-    """a − b の企業単位のペア比較(純資産の改善・解消率・順位相関)。"""
+    """a − b の企業単位のペア比較(純資産の改善・解消率・順位相関)。
+
+    順位相関のブートストラップは比較ごとに乱数 0 から始める(表の作り方の順序によらない)。
+    """
+    rng = np.random.default_rng(0)
     ca, cb = ctx(a, cls, names), ctx(b, cls, names)
     ga = ca.comp[ca.comp["version"] == a.setting].set_index("docID")
     gb = cb.comp[cb.comp["version"] == b.setting].set_index("docID").reindex(ga.index)
@@ -167,12 +169,10 @@ def main() -> None:  # noqa: PLR0915
     OUT.mkdir(parents=True, exist_ok=True)
     setup_excl(names)
     rng = np.random.default_rng(0)
-    m: dict[str, dict[str, Any]] = {k: {} for k in (*CELLS, "ref_nn", "ref_l2")}
+    m: dict[str, dict[str, Any]] = {k: {} for k in CELLS}
     for k, by in CELLS.items():
         for cls, src in by.items():
             m[k][cls] = None if src is None else metrics(src, cls, names, members)
-    for k, src in REF_C2.items():
-        m[f"ref_{k}"]["c2"] = metrics(src, "c2", names, members)
     vs: dict[str, dict[str, Any]] = {}
     for k in ("l1only", "bary", "balarg", "nn", "l2", "m1", "rep", "re", "t1", "t2"):
         vs[k] = {}
@@ -240,13 +240,6 @@ def main() -> None:  # noqa: PLR0915
             v = m[k][cls]
             au = auc[cls][k]
             sp = float(plans[cls].loc[sup[k], "support_med"])
-            if v is None:
-                rv = m["ref_nn"]["c2"]
-                out.append(f"| {n} | {lab} | — | — | —(参考 {rv['nai']:.3f}) | — | —(参考 "
-                         f"{rv['res']:.2f}) | —(参考 {pct(rv['paid_dec'])}) "
-                         f"| —(参考 {rv['rho']:+.3f}) | — | — | {au[0]:.3f} / {au[1]:.3f} "
-                         f"| {sp:.2f} |")
-                continue
             d = "—" if k == "prop" else ci(vs[k][cls]["nai"])
             dr = "—" if k == "prop" else ci(vs[k][cls]["rho"])
             s_ = "—" if k == "prop" else sym(vs[k][cls]["sign"])
@@ -264,9 +257,8 @@ def main() -> None:  # noqa: PLR0915
           "[−0.187, +0.001] で有意でなかった)。ブートストラップの乱数で判定が変わりうる。",
           "- 重心の AUC 0.995 / 0.999 は LightGBM の値で、ロジスティック回帰では 0.589 / 0.599。"
           "木のモデルが「ちょうど 0」の構造で見分ける(命題 2)。",
-          "- 4 の class 2: class 1 の λ(λ̃ = 1 × s_c1)を当てはめた生成がない(本ステージは新しい"
-          "生成を"
-          "しない)。「参考」は class 2 の格子の λ̃ = 1(λ は class 1 の値の 0.92 倍)の値。", ""]
+          "- 4 の class 2: class 1 の λ(1 × s_c1)を当てはめて、ステージ69.5 で生成した(class 2 の"
+          "格子では λ̃ = 1.09179)。", ""]
     # 表 3
     out += ["## 表 3: QP の設計と事後選択 m = 10 の感度分析", "",
             "| class | 設定 | λ̃ | 違反 | 純資産の改善 | 提案との差 [95%] | 解消率 | 払込資本↓ "
@@ -279,13 +271,6 @@ def main() -> None:  # noqa: PLR0915
                        ("m1", "2 事後選択なし(m = 1)"), ("l2", "3 等重み L2 + QP(最近傍)"),
                        ("re", "4 利益剰余金にコスト(c_RE > 0)")):
             v = m[k][cls]
-            if v is None:
-                rv = m["ref_l2"]["c2"]
-                out.append(f"| {n} | {lab} | — | — | —(参考 {rv['nai']:.3f}) | — "
-                           f"| —(参考 {rv['res']:.2f}) | —(参考 {pct(rv['paid_dec'])}) | — | — "
-                           f"| —(参考 {rv['n_changed']:.0f}) | — | —(参考 {rv['rho']:+.3f}) "
-                           "| — | — |")
-                continue
             d = "—" if k == "prop" else ci(vs[k][cls]["nai"])
             dr = "—" if k == "prop" else ci(vs[k][cls]["rho"])
             s_ = "—" if k == "prop" else sym(vs[k][cls]["sign"])
@@ -301,8 +286,8 @@ def main() -> None:  # noqa: PLR0915
           "ソルバでの再現 1r と並べる(1r と 1 の差は表の「提案との差」)。",
           "- 2 と 1 の比較: m = 10 を外すと、class 1 の較正で λ̃ = 3 が選ばれる。払込資本↓ は過剰に"
           "ならない(較正した λ が抑える)が、純資産の改善は下がる。",
-          "- 3 の class 2: class 1 の λ(λ̃ = 10 × s_c1)を当てはめた生成がない。「参考」は class 2 の"
-          "格子の λ̃ = 10(λ は class 1 の値の 0.81 倍)の値。",
+          "- 3 の class 2: class 1 の λ(10 × s_c1)を当てはめて、ステージ69.5 で生成した(class 2 の"
+          "格子では λ̃ = 12.2804)。",
           "- 実データの純資産の改善は 2 年の年率。生成は 5 年分の終点(年率にすると ÷ 5)。", ""]
     # 表 4
     out += ["## 表 4: 目標の定義の比較(T0 水準のマッチング・T1 再建終点・T2 遷移加算)", "",
