@@ -52,7 +52,9 @@ MARGIN = 1.0 - 1e-6
 # 設定 → (種類, 払込資本の m)。種類: ens = 事後アンサンブル、tau = 目標 1 点、l2 = 等重み L2
 SETTINGS = {"f1": ("ens", 10.0), "f1m1": ("ens", 1.0), "a2": ("tau", 10.0),
             "a2t05": ("tau", 10.0), "bal_l2": ("tau", 10.0), "f1bal": ("ens", 10.0),
-            "l2nn": ("l2", 10.0), "pre05": ("tau", 10.0), "pre05m1": ("tau", 10.0)}
+            "l2nn": ("l2", 10.0), "pre05": ("tau", 10.0), "pre05m1": ("tau", 10.0),
+            # 追補(addendum_criteria.md §3): F1 の τ1 の感度
+            "f1t001": ("ens", 10.0), "f1t01": ("ens", 10.0)}
 
 
 def liability_cap(members: dict[str, np.ndarray], x0: np.ndarray) -> tuple[LinearConstraint, ...]:
@@ -73,6 +75,9 @@ def load(st: str, cls: str, src: list[str]) -> dict[str, np.ndarray]:
     elif st in ("f1", "f1m1"):
         z = np.load(f"data/interim/stage71/plan_{cls}.npz", allow_pickle=True)
         key = "t0.05"
+    elif st in ("f1t001", "f1t01"):
+        z = np.load(DATA / f"tau_{cls}.npz", allow_pickle=True)
+        key = {"f1t001": "t0.01", "f1t01": "t0.1"}[st]
     else:
         z = np.load(DATA / f"plan_{cls}.npz", allow_pickle=True)
         key = {"f1bal": "bal", "l2nn": "l2nn", "pre05": "pre05_l2", "pre05m1": "pre05_m1"}[st]
@@ -88,6 +93,7 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--cls", choices=("c2", "c1"), required=True)
     ap.add_argument("--setting", choices=tuple(SETTINGS), required=True)
     ap.add_argument("--shard", default="0/1")
+    ap.add_argument("--gen-root", type=Path, default=DATA / "gen", help="生成の出力先")
     args = ap.parse_args()
     st = args.setting
     kind, m_paid = SETTINGS[st]
@@ -187,7 +193,7 @@ def main() -> None:  # noqa: PLR0915
                 row[f"x0_{n}"] = float(x0[j_])
                 row[f"x1_{n}"] = float(y[j_])
             rows.append(row)
-        out_dir = DATA / "gen" / args.cls / f"{st}__l{lt:g}"
+        out_dir = args.gen_root / args.cls / f"{st}__l{lt:g}"
         out_dir.mkdir(parents=True, exist_ok=True)
         df = pd.DataFrame(rows)
         for seed in (0, 1, 2):
