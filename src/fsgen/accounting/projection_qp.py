@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import time
+import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,7 +28,7 @@ from fsgen.accounting.constraints import (
     build_constraint_matrix,
     state_vector_names,
 )
-from fsgen.accounting.plausibility import LinearConstraint
+from fsgen.accounting.plausibility import INACTIVE_ZERO, LinearConstraint, subtotal_members
 from fsgen.errors import InfeasibleProjectionError, SolverNotConvergedError
 
 _DEFAULT_WEIGHT_FLOOR = 1e-3  # 重みの床(ステージ8 §A.5)。理由は_default_weightsのdocstring参照。
@@ -107,6 +108,14 @@ def _max_violation(
         elif b.sign == "nonpos":
             violations.append(max(0.0, v))
     return max(violations)
+
+
+def _start_assets(spec: CanonicalSpec, names: tuple[str, ...], x_start: np.ndarray) -> float:
+    """始点の総資産の絶対値(資産合計の小計がない仕様では max|x_start|、最低 1)。"""
+    members = subtotal_members(spec, names)
+    a = members.get("jppfs_cor_Assets")
+    total = abs(float(a @ x_start)) if a is not None else float(np.max(np.abs(x_start)))
+    return max(total, 1.0) if a is None else total
 
 
 def project_onto_feasible(
@@ -213,10 +222,19 @@ def project_onto_feasible(
             constraints.append(u[i] <= 0)
 
     if enforce_inactive:
+        # ステージ74(A-4): ゼロの判定を plausibility.inactive_accounts と同じ
+        # |x| < INACTIVE_ZERO × |総資産(始点)| にそろえ、始点の値に固定する
+        # (厳密な 0 との比較をやめた)。
+        # 対象は全基礎科目のまま(INACTIVE_ACCOUNTS の 4 科目ではない)なので、非推奨とする
+        warnings.warn(
+            "enforce_inactive は非推奨。frozen_accounts=inactive_accounts(x_start, names) を使う"
+            "(plausibility の不活性の定義と同じになる)",
+            DeprecationWarning, stacklevel=2)
+        zero_tol = INACTIVE_ZERO * _start_assets(spec, names, x_start)
         for b in spec.basis:
             i = index[b.name]
-            if x_start[i] == 0.0:
-                constraints.append(u[i] == 0)
+            if abs(float(x_start[i])) < zero_tol:
+                constraints.append(u[i] == u_start[i])
 
     for name in frozen_accounts:
         i = index[name]

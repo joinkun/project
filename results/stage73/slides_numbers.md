@@ -1,5 +1,7 @@
 # 発表資料の数値(最終版: F1 事後アンサンブル、ステージ73)
 
+> **取り消し(ステージ74)**: このファイルの F1 の数値は、コストの推定に評価の参照と較正の目標が入っていた(リークあり)。リークのない F1 は事前の規則を満たさず、F1 の採用は取り消した。最終設定はステージ69 の設定(`results/stage65/slides_numbers.md`・`results/stage69/paper_tables.md`)。詳細は `results/stage74/report.md`。
+
 **このファイルが最新。** `results/stage65/slides_numbers.md` と `results/stage69/paper_tables.md` はステージ69 の設定(旧)の数値。すべて `results/stage72/summary.json`・`addendum.json` から`scripts/stage73_slides.py` で作った(手で写していない)。
 
 ## 最終提案手法(ステージ72 で事前の 4 条件を満たして採用)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from fsgen.accounting.constraints import BasisSpec, CanonicalSpec, SubtotalSpec
 from fsgen.accounting.projection_qp import (
@@ -113,9 +114,20 @@ def test_direction_constraint_not_triggered_without_debt_overhang() -> None:
 def test_enforce_inactive_keeps_zero_components_zero() -> None:
     x_start = _feasible_point(cash=100.0, stl=0.0, treasury=0.0)
     y = _feasible_point(cash=80.0, stl=20.0, treasury=-5.0)
-    x_proj, _info = project_onto_feasible(y, _SPEC, x_start=x_start, enforce_inactive=True)
+    with pytest.warns(DeprecationWarning):
+        x_proj, _info = project_onto_feasible(y, _SPEC, x_start=x_start, enforce_inactive=True)
     assert abs(x_proj[1]) < 1e-6  # STL は始点で0だったので0のまま
     assert abs(x_proj[2]) < 1e-6  # Treasury も始点で0だったので0のまま
+
+
+def test_enforce_inactive_uses_inactive_zero_relative_to_assets() -> None:
+    """ステージ74(A-4): ゼロの判定は |x| < INACTIVE_ZERO × |総資産(始点)|(plausibility と同じ)。"""
+    x_start = _feasible_point(cash=100.0, stl=1e-5, treasury=-1e-3)  # 1e-5 < 1e-4、1e-3 > 1e-4
+    y = _feasible_point(cash=80.0, stl=20.0, treasury=-5.0)
+    with pytest.warns(DeprecationWarning):
+        x_proj, _info = project_onto_feasible(y, _SPEC, x_start=x_start, enforce_inactive=True)
+    assert abs(x_proj[1] - 1e-5) < 1e-7  # しきい値未満なので始点の値に固定
+    assert abs(x_proj[2] - (-1e-3)) > 1e-6  # しきい値以上なので固定されない(始点から動く)
 
 
 def test_weighted_and_unweighted_projections_differ() -> None:
