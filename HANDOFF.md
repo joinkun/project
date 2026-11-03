@@ -1,4 +1,4 @@
-# 引き継ぎ文書(ステージ1〜74。最終設定はステージ69 の設定。F1 はリークにより取り消し)
+# 引き継ぎ文書(ステージ1〜76。最終設定はステージ69 の設定。ステージ75 の規則で R1・F1 が採用されたが、最終の λ̃ が未決)
 
 2026-10-17 時点の状態。**ステージ68 で実験を終了(モデルの改良・追加実験は凍結)し、ステージ69 で論文・発表用のマスター表 `results/stage69/paper_tables.md` と定式化 `results/stage69/formulation_final.md` を確定した。** 以降は論文執筆のみ。発表の数値は `results/stage65/slides_numbers.md`(論文の表と 31 項目を照合済み、`results/stage69/consistency.md`)。
 (経緯: ステージ31 で旧最終設定、47 で制約を確定。59〜65 で輸送計画 + 凸 QP に置き換え、66〜68 で改訂を試みたが不採用。)
@@ -236,6 +236,8 @@ min(−1e-3 × 総資産(始点), 始点の値) を下回れば違反。10 は�
 | 72 | 安全マージンつき 𝓕⁺ での F1 の正式判定(`results/stage72/report.md`、決定は計算の前に `criteria.md`)。負債の上限に (1 − 10⁻⁶) を掛け、項目 5 の違反 38 → 0。**F1(τ1 = 0.05、m = 10、λ̃ = 0.3)は 4 条件を満たし採用**。事前に混ぜた目標はキメラになる(L2 重心のゼロ 3.3 / 2.5、AUC 0.94〜0.96、M1 の残差 0.04〜0.05)が、QP の後の終点は貸借もゼロも保つ。F1 の利点は class 1 の順位相関(+0.371、事前の混合は +0.11〜0.24 で有意に劣る)。m = 1 は不採用 。追補(後の版の指示): F1 の 1 社選択(新設計の argmax)に対する利点は class 1 の順位相関だけ(+0.361、純資産の改善は差なし)。順位相関は τ1 に強く依存し、τ1 = 0.05 は最良ではない(class 1 は τ1 = 0.1・バランスで高く、class 2 は τ1 = 0.01・バランスで高い) |
 | 73 | 最終文書の更新(新しい計算なし)。`results/stage73/slides_numbers.md`(`scripts/stage73_slides.py` が stage72 の JSON から生成)・`formulation_f1.md`。旧設定の `stage65/slides_numbers.md`・`stage69/paper_tables.md` の冒頭に、旧設定である旨の注記を追加。リポジトリにスライドの元ファイル(PDF・tex・pptx)はない |
 | 74 | 査読の指摘(A-1・相対コスト・A-4)(`results/stage74/report.md`、決定は計算の前に `criteria.md`)。72 社のプールはリークしていた(class 2 の参照 15/15、class 1 の較正の目標 57/57・参照 56/68)。**リークのない F1(57 / 10 社)は条件 4 を満たさず、F1 の採用を取り消してステージ69 の設定に戻す**。57 社を class 1 に使うと(リークあり)ステージ72 の値を再現する(λ̃ = 0.3)。相対コスト・ハイブリッドは少額科目の膨張をほぼなくす(17% → 0〜1%)が、class 1 の順位相関が有意に劣る。名目の対数変化率では資本金の c⁻/c⁺ が 0.34 → 0.06(減資が最も安くなる)。`enforce_inactive` のゼロの判定を `INACTIVE_ZERO` にそろえ、非推奨にした |
+| 75 | 57 社(class 1 → class 0)の 5 fold の交差適合による比率コスト R1〜R3 と argmax / F1(`results/stage75/report.md`、決定は計算の前に `criteria.md`、途中の追記 §6 = fold f2 の SE 0 の処理)。**規則上は R1・F1 が採用**(候補 R1・F1 / R2・F1、L_f の fold 平均で R1・F1)。差は class 2 の純資産の改善 +0.095(4 fold で有意)、class 1 は +0.001(f2 以外の 4 fold は +0.017〜+0.026)。膨張は 12.7% / 24.2%(基準 2.0% / 2.2%)。減資は R1〜R3 でも増資より安い(c⁻/c⁺ = 0.31 / 0.20 / 0.33)。**最終の λ̃(案 a: fold 中央値 0.1 / b: 57 社で再較正 / c: fold ごと)は未決で、決まるまで論文の数値はステージ69 の設定のまま** |
+| 76 | 指導教員の指摘(2026-10-29)への対応(`results/stage76/report.md`、`scripts/stage76_feasibility_map.py`)。コストの確率的な意味: R1〜R3 の傾きは u・v を独立な指数分布とするモデルの最尤推定。非対称ラプラスでは非対称の比が R3 の平方根。abs はハードルモデルの凸緩和。ステージ69 の設定で、苦境の確率(LightGBM、企業単位の交差適合)は class 2 で 37.6% → 13.6%。ただし終点が健全の中央値以下は 2%。生成の Ψ は 82% / 99% が全上場企業の 1 年の推移の 95% 点以内。class 2 の終点の 65% は健全企業の近傍(r90)に 1 社もない。MDS の地図は 2 次元の寄与 27% で、苦境の等高線は平ら |
 
 ## 7. 却下した設計と理由
 
@@ -414,6 +416,8 @@ min(−1e-3 × 総資産(始点), 始点の値) を下回れば違反。10 は�
 | (make なし) | ステージ71 F1・F2・F3 と 𝓕⁺ | `stage71_ot.py`(候補集合と F3 の目標、POT)、`results/stage71/run_qp.sh`(`stage71_qp.py`、cvxpy。F2 は `ExpectedL1`)、`metrics_stage39.py --gen-dir data/interim/stage71/gen`、`stage71_evaluate.py`、`stage71_sensitivity.py`、`stage71_bs.py` |
 | (make なし) | ステージ72 F1 の正式判定 | `results/stage72/run_ot.sh`(`stage72_ot.py`、POT)、`results/stage72/run_qp.sh`(`stage72_qp.py`、cvxpy)、`metrics_stage39.py --gen-dir data/interim/stage72/gen`、`stage72_evaluate.py`、`stage72_tables.py`(`paper_tables_v2.md`) |
 | (make なし) | ステージ74 プールの分離・相対コスト | `results/stage74/run.sh`(`stage74_weights.py` → `stage74_ot.py`(POT)→ `stage74_qp.py`(cvxpy)→ `metrics_stage39.py`)、`stage74_evaluate.py`、`stage74_bs.py`。係数は `stage74_costs.py` |
+| (make なし) | ステージ75 57 社の交差適合・比率コスト | `results/stage75/run.sh`(`stage75_weights.py` → `stage75_ot.py`(POT)→ `stage75_qp.py`(cvxpy)→ `metrics_stage39.py`)、`stage75_evaluate.py`、`stage75_bs.py` |
+| (make なし) | ステージ76 苦境の確率・実行可能性・地図 | `stage76_feasibility_map.py`(lightgbm・sklearn) |
 
 中核のコード:
 - `src/fsgen/accounting/projection_qp.py`: 射影 QP(`extra_constraints`、strict な収束検査、OSQP→CLARABEL/ECOS へのフォールバック)
