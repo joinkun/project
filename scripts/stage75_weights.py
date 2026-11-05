@@ -8,11 +8,18 @@ numpy・pandas だけのプロセス。
 
 出力: ``data/interim/stage75/weights.json``、``results/stage75/costs.md``。
 
+R3 の定義(criteria.md §1、計算の前に記録): θ± = (1/N) Σ_k (±Δ^nom_k)₊ / (|x_{k,0}| + σ)。
+これは、規格化した変化 z_k = Δ^nom_k / (|x_{k,0}| + σ) にモデル A(増加分・減少分を独立な指数分布)を
+当てはめたときの尺度の最尤推定である。``--r3-compare`` は、規格化しない θ± = (1/N) Σ_k (±Δ^nom_k)₊
+(Δ^nom の単位でのモデル A の最尤推定)と並べる診断だけを出し、weights.json は変えない。
+
     uv run python scripts/stage75_weights.py
+    uv run python scripts/stage75_weights.py --r3-compare results/stage78/r3_compare.md
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -78,9 +85,66 @@ def ratio_costs(codes: list[str], names: tuple[str, ...], sigma: np.ndarray
     return out
 
 
+def r3_compare(out: Path, names: tuple[str, ...], sigma: np.ndarray) -> None:
+    """R3 の (A) 記録した定義(規格化あり)と (B) 規格化なしの c± を、57 社の全体で並べる。"""
+    ja: dict[str, str] = yaml.safe_load(
+        Path("conf/accounts/labels_ja.yaml").read_text(encoding="utf-8"))["accounts"]
+    p57, _ = folds()
+    p = pd.read_csv(_PANEL, dtype={"edinetCode": str})
+    a = p[p["t"] == 2022].set_index("edinetCode").loc[p57]
+    b = p[p["t"] == 2024].set_index("edinetCode").loc[p57]
+    xa = a[[f"cur_{n}" for n in names]].fillna(0).to_numpy(float)
+    xb = b[[f"cur_{n}" for n in names]].fillna(0).to_numpy(float)
+    ta = a["cur_total_assets"].to_numpy(float)
+    dnom = (xb - xa) / ta[:, None]
+    den = np.abs(xa / ta[:, None]) + sigma[None, :]
+    frozen = np.array([nm in FROZEN for nm in names])
+
+    def cost(theta: np.ndarray) -> np.ndarray:
+        with np.errstate(divide="ignore"):
+            c = np.where(theta > 0, 1.0 / np.where(theta > 0, theta, 1.0), CAP)
+        c = np.minimum(c, CAP)
+        c[:, frozen] = 0.0
+        return c
+    ca = cost(np.stack([(np.maximum(sg * dnom, 0.0) / den).mean(axis=0) for sg in (1.0, -1.0)]))
+    cb = cost(np.stack([np.maximum(sg * dnom, 0.0).mean(axis=0) for sg in (1.0, -1.0)]))
+    rec = ratio_costs(p57, names, sigma)["R3"]
+    if not np.allclose(ca, rec):
+        raise ValueError("(A) が weights.json の R3 と一致しない")
+    lines = ["# R3 の 2 つの定義(57 社の全体)", "",
+             "(A) 記録した定義(criteria.md §1、ステージ75 の計算に使ったもの): "
+             "θ± = (1/N) Σ (±Δ^nom)₊ / (|x₀| + σ)。(B) 規格化なし: θ± = (1/N) Σ (±Δ^nom)₊。"
+             "c = min(1/θ, 10³)。", "",
+             "| 科目 | (A) c⁺ / c⁻(比) | (B) c⁺ / c⁻(比) |", "|---|---|---|"]
+    for nm in SHOW:
+        j = names.index(nm)
+        lines.append(f"| {ja.get(nm, nm)} | {ca[0, j]:.1f} / {ca[1, j]:.1f}"
+                     f"({ca[1, j] / ca[0, j]:.2f}) | {cb[0, j]:.1f} / {cb[1, j]:.1f}"
+                     f"({cb[1, j] / cb[0, j]:.2f}) |")
+    act = ~frozen
+    rat_a = np.log(ca[1, act] / ca[0, act])
+    rat_b = np.log(cb[1, act] / cb[0, act])
+    lines += ["", f"凍結以外の {int(act.sum())} 科目で、log(c⁻/c⁺) の (A) と (B) の相関 "
+              f"{np.corrcoef(rat_a, rat_b)[0, 1]:.3f}、符号の一致 "
+              f"{int((np.sign(rat_a) == np.sign(rat_b)).sum())} / {int(act.sum())}。"
+              f"(B) で c = 10³ の上限に当たる方向 {int((cb[:, act] >= CAP).sum())}、"
+              f"(A) では {int((ca[:, act] >= CAP).sum())}。", ""]
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print("\n".join(lines))
+
+
 def main() -> None:  # noqa: PLR0915
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--r3-compare", type=Path, default=None,
+                    help="R3 の 2 つの定義の比較だけを書き出す(weights.json は変えない)")
+    args = ap.parse_args()
     names = state_vector_names(load_canonical_spec(Path("conf/accounts/core.yaml")),
                                include_subtotals=False)
+    if args.r3_compare is not None:
+        sd = pd.read_csv("results/stage59/pooled_sd.csv").set_index("account").reindex(names)
+        r3_compare(args.r3_compare, names, np.maximum(sd["sigma_1"].to_numpy(float), SIGMA_FLOOR))
+        return
     ja: dict[str, str] = yaml.safe_load(
         Path("conf/accounts/labels_ja.yaml").read_text(encoding="utf-8"))["accounts"]
     sd = pd.read_csv("results/stage59/pooled_sd.csv").set_index("account").reindex(names)

@@ -8,6 +8,10 @@ argmax は S(i) の 1 位だけ、F1 は S(i) の事後アンサンブル。λ =
 
 出力: ``data/interim/stage75/gen_{cfg}/{cls}/{種類}_{目標}__l{λ̃}``。
 
+尺度 s は ``--s-from f1``(既定)で、目標によらず F1 の重み p̃ の下で計算する(criteria.md §3)。
+ステージ75 で記録した argmax の結果は ``--s-from target``(argmax では S(i) の 1 位だけの重み)で
+生成した(``results/stage75/run.sh``)。F1 ではどちらも同じ。
+
     uv run python scripts/stage75_qp.py --cls c1 --cfg f0 --kind R1 --target f1 --shard 0/2
 """
 
@@ -53,6 +57,10 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--kind", choices=("abs", "R1", "R2", "R3"), required=True)
     ap.add_argument("--target", choices=("argmax", "f1"), required=True)
     ap.add_argument("--shard", default="0/1")
+    ap.add_argument("--s-from", choices=("f1", "target"), default="f1",
+                    help="尺度 s の重み(f1 = F1 の p̃、target = 目標の重み)")
+    ap.add_argument("--data-out", type=Path, default=DATA, help="生成の出力先")
+    ap.add_argument("--out", type=Path, default=OUT, help="QP の記録の出力先")
     args = ap.parse_args()
     spec = load_canonical_spec(_CANONICAL)
     names = state_vector_names(spec, include_subtotals=False)
@@ -76,19 +84,20 @@ def main() -> None:  # noqa: PLR0915
     filer = pd.read_csv("data/interim/labels/labels.csv", dtype={"docID": str}).drop_duplicates(
         "docID").set_index("docID")["filerName"]
 
-    def plan(cls: str, src: list[str]) -> tuple[np.ndarray, np.ndarray]:
+    def plan(cls: str, src: list[str], one_hot: bool) -> tuple[np.ndarray, np.ndarray]:
         z = np.load(DATA / f"plan_{cls}_{args.cfg}.npz", allow_pickle=True)
         if [str(v) for v in z["source_docs"]] != src:
             raise ValueError("始点の並びが一致しない")
         idx, pt = np.asarray(z[f"{args.kind}__idx"]), np.asarray(z[f"{args.kind}__pt"])
-        if args.target == "argmax":
+        if one_hot:
             pt = np.zeros_like(pt)
             pt[:, 0] = 1.0
         return idx, pt
 
+    argmax = args.target == "argmax"
     m1 = sources("c1", x, lab, docs_a)
     x1 = x[m1]
-    idx1, pt1 = plan("c1", [str(d) for d in docs_a[m1]])
+    idx1, pt1 = plan("c1", [str(d) for d in docs_a[m1]], argmax and args.s_from == "target")
     d = xt[idx1] - x1[:, None, :]
     num = (pt1 * 0.5 * (w * d ** 2).sum(axis=2)).sum(axis=1)
     den = (pt1 * (np.where(d > 0, cp, cm) * np.abs(d)).sum(axis=2)).sum(axis=1)
@@ -96,7 +105,7 @@ def main() -> None:  # noqa: PLR0915
     mask = sources(args.cls, x, lab, docs_a)
     xs = x[mask]
     src = [str(dd) for dd in docs_a[mask]]
-    idx, pt = plan(args.cls, src)
+    idx, pt = plan(args.cls, src, argmax)
     rw = RecourseWeights(w, na_coef, 0.0, cp, cm, 0.0)
     i_sh, n_sh = (int(v) for v in args.shard.split("/"))
     lams = list(LAMS)[i_sh::n_sh]
@@ -135,7 +144,7 @@ def main() -> None:  # noqa: PLR0915
                 row[f"x0_{n}"] = float(x0[j_])
                 row[f"x1_{n}"] = float(y[j_])
             rows.append(row)
-        out_dir = DATA / f"gen_{args.cfg}" / args.cls / f"{tag}__l{lt:g}"
+        out_dir = args.data_out / f"gen_{args.cfg}" / args.cls / f"{tag}__l{lt:g}"
         out_dir.mkdir(parents=True, exist_ok=True)
         df = pd.DataFrame(rows)
         for seed in (0, 1, 2):
@@ -146,9 +155,9 @@ def main() -> None:  # noqa: PLR0915
                         "seconds": round(time.perf_counter() - t0, 1)})
         print(f"  λ̃ = {lt:g}: 不可能 {n_infeas}、代替ソルバ {n_fb}"
               f"({time.perf_counter() - t0:.0f}s)", flush=True)
-    (OUT / "qp").mkdir(parents=True, exist_ok=True)
+    (args.out / "qp").mkdir(parents=True, exist_ok=True)
     pd.DataFrame(summary).to_csv(
-        OUT / "qp" / f"{args.cls}_{args.cfg}_{tag}_{i_sh}of{n_sh}.csv", index=False)
+        args.out / "qp" / f"{args.cls}_{args.cfg}_{tag}_{i_sh}of{n_sh}.csv", index=False)
 
 
 if __name__ == "__main__":

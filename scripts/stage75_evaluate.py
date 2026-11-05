@@ -7,11 +7,17 @@
 
 出力: ``results/stage75/report_tables.md``・``summary.json``。
 
+``--argmax-data`` で argmax 系の生成と指標だけ別の場所から読む(ステージ78: F1 の尺度 s で
+生成し直した argmax)。
+
     uv run python scripts/stage75_evaluate.py
+    uv run python scripts/stage75_evaluate.py --argmax-data data/interim/stage78 \
+        --out results/stage78/d1_sF1
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 from typing import Any
@@ -108,6 +114,11 @@ def versus_ref(a: Src, b: Src, cls: str, names: tuple[str, ...], ref: pd.Series
 
 
 def main() -> None:  # noqa: PLR0915
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--argmax-data", type=Path, default=DATA, help="argmax 系の生成・指標の場所")
+    ap.add_argument("--out", type=Path, default=OUT)
+    args = ap.parse_args()
+    args.out.mkdir(parents=True, exist_ok=True)
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
     names = state_vector_names(spec, include_subtotals=False)
     members = subtotal_members(spec, names)
@@ -135,7 +146,8 @@ def main() -> None:  # noqa: PLR0915
     auc_cache: dict[tuple[str, str, str, str], float] = {}
 
     def src_of(cfg: str, st: str, lt: float) -> Src:
-        return Src(DATA / f"metrics_{cfg}", DATA / f"gen_{cfg}", f"{st}__l{lt:g}", f"{lt:g}")
+        d = args.argmax_data if st.endswith("_argmax") else DATA
+        return Src(d / f"metrics_{cfg}", d / f"gen_{cfg}", f"{st}__l{lt:g}", f"{lt:g}")
 
     def calibrate(cfg: str, st: str, r: dict[str, float], se: dict[str, float]
                   ) -> tuple[float | None, float, list[str]]:
@@ -349,8 +361,8 @@ def main() -> None:  # noqa: PLR0915
                 f"| {v['paid_dec']:.0%} / {v['paid_inc']:.0%} | {v['n_changed']:.0f} "
                 f"| {e['infl']:.1%} | {e['multi']:.2f} | {e['auc']:.3f} | {e['e_zero']:.2f} |")
         lines.append("")
-    (OUT / "report_tables.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    (OUT / "summary.json").write_text(json.dumps(
+    (args.out / "report_tables.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (args.out / "summary.json").write_text(json.dumps(
         {"d1": d1, "d1_summary": summ, "final": final, "base": by, "base_rho_c1": base_rho_c1,
          "ref_n": ref_n, "d2": d2}, ensure_ascii=False, indent=1, default=float),
         encoding="utf-8")
