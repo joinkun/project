@@ -1,4 +1,4 @@
-# 引き継ぎ文書(ステージ1〜78。最終設定は R1・F1(57 社の比率コスト、λ̃ = 0.1)。比較の基準はステージ69 の設定)
+# 引き継ぎ文書(ステージ1〜79。最終設定は R1・F1(57 社の比率コスト、λ̃ = 0.1)。比較の基準はステージ69 の設定)
 
 2026-10-17 時点の状態。**ステージ68 で実験を終了(モデルの改良・追加実験は凍結)し、ステージ69 で論文・発表用のマスター表 `results/stage69/paper_tables.md` と定式化 `results/stage69/formulation_final.md` を確定した。** 以降は論文執筆のみ。発表の数値は `results/stage65/slides_numbers.md`(論文の表と 31 項目を照合済み、`results/stage69/consistency.md`)。
 (経緯: ステージ31 で旧最終設定、47 で制約を確定。59〜65 で輸送計画 + 凸 QP に置き換え、66〜68 で改訂を試みたが不採用。)
@@ -260,6 +260,7 @@ min(−1e-3 × 総資産(始点), 始点の値) を下回れば違反。10 は�
 | 76 | 指導教員の指摘(2026-10-29)への対応(`results/stage76/report.md`、`scripts/stage76_feasibility_map.py`)。コストの確率的な意味: R1〜R3 の傾きは u・v を独立な指数分布とするモデルの最尤推定。非対称ラプラスでは非対称の比が R3 の平方根。abs はハードルモデルの凸緩和。ステージ69 の設定で、苦境の確率(LightGBM、企業単位の交差適合)は class 2 で 37.6% → 13.6%。ただし終点が健全の中央値以下は 2%。生成の Ψ は 82% / 99% が全上場企業の 1 年の推移の 95% 点以内。class 2 の終点の 65% は健全企業の近傍(r90)に 1 社もない。MDS の地図は 2 次元の寄与 27% で、苦境の等高線は平ら |
 | 77 | 最終の仕上げ(`results/stage77/slides_numbers_final.md`、`scripts/stage77_final_feasibility.py`)。ユーザーの決定で R1・F1 を正式に採用し、案 a(λ̃ = 0.1)で単一の生成を確定。ステージ69 の設定と並べて、苦境の確率・実行可能性・近傍密度・地図・BS 表を計算し直した。class 2 の苦境の確率(LightGBM)の中央値は 37.6% → 0.51%(ステージ69 は 13.6%)だが、終点 ≤ 健全の中央値は 4%。健全企業が近傍に 1 社もない終点は 65% → 36%。生成の Ψ は大きくなり、class 2 では 3 年の推移の 95% 点以内が 84% → 69%。地図の図 2 は横軸が分類器のロジットで、左右の勾配は作り方から生じる |
 | 78 | コード監査の指摘への対応(`results/stage78/report.md`)。argmax 系を事前登録どおり F1 の尺度 s で生成し直して D1 を再評価し、**R1・F1 の採用は変わらない**(F1 の数値は不変)。命題 1 は R1 のコスト + 同一企業マスクでも成立(マスク対象は 0 / 1 組)。2 社の平均を厳密に 10,000 組にして 3.24 → 3.21。**QP の終点そのものの識別 AUC は LightGBM で 0.975〜1.000(\|v\| < 10⁻⁶ を丸めて 0.86〜0.95)、LogReg で 0.82〜0.86**。Ψ_R1 の尺度では、R1・F1 の class 2 の空白地帯率は 78% → 53%(Ψ60 では 76% → 36%)。回復率の四分位の単調減少は合算の 1 年でのみ全尺度で成立。R3 は事前登録の定義(規格化あり)を維持し、論文の式を合わせる。「R1〜R3 はモデル A の最尤推定に厳密に一致」は言い過ぎで、厳密なのは R3 だけ(R1・R2 は中央値の頑健版)。原稿の .docx と生成スクリプトはこのマシンになく、未反映(§6 に反映すべき式・数値の一覧) |
+| 79 | 「移動量 ÷ 区間面積」のコスト A1・A2 とスパース OT(`results/stage79/report.md`、決定は計算の前に `criteria.md`、§7 の追記 = スパース OT の列の罰則の変更)。D1 で、規則上は **A1・F1 が置き換えの候補**だが、R1・F1 との差は純資産の改善で +0.001〜+0.006 と実質的にない(A1 は R1 のほぼ定数倍、log の相関 0.997)。R1・F1 のままを推奨し、決定はユーザー。A2(2 区間)は凹が 37 / 52 方向で、R1・F1 より劣る(class 2 −0.040)。スパース OT(`src/fsgen/models/sparse_transport.py`)はカットオフなしで候補 5 社(中央値)、主指標は変わらず、ESS が class 1 で 3 未満。Sinkhorn は 25〜27% の p が厳密に 0 だが、累積 90% には 10〜11 社(最大 187)が必要で、現行のカットオフは上限 10 社に当たっている |
 
 ## 7. 却下した設計と理由
 
@@ -442,6 +443,7 @@ min(−1e-3 × 総資産(始点), 始点の値) を下回れば違反。10 は�
 | (make なし) | ステージ76 苦境の確率・実行可能性・地図 | `stage76_feasibility_map.py`(lightgbm・sklearn) |
 | (make なし) | ステージ77 最終の比較・実行可能性・BS 表 | `stage77_final_feasibility.py`(lightgbm・sklearn) |
 | (make なし) | ステージ78 コード監査の検算 | `verify_stage69.py --out results/stage78/verify`(POT)、`results/stage78/run_argmax.sh`(cvxpy → lightgbm)、`stage75_evaluate.py --argmax-data data/interim/stage78 --out results/stage78/d1_sF1`、`stage78_checks.py`、`stage75_weights.py --r3-compare` |
+| (make なし) | ステージ79 区間面積のコスト・スパース OT | `results/stage79/run.sh`(`stage79_weights.py` → `stage79_ot.py`(POT・numpy)→ `stage79_qp.py`(cvxpy)→ `metrics_stage39.py` → `stage79_evaluate.py`) |
 
 中核のコード:
 - `src/fsgen/accounting/projection_qp.py`: 射影 QP(`extra_constraints`、strict な収束検査、OSQP→CLARABEL/ECOS へのフォールバック)
