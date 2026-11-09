@@ -1,0 +1,2 @@
+cls,cfg,kind,gamma,tau,nz_med,nz_max,ess_med,iters,residual
+c2,full,A1,0.1,4.569706851641411e-05,8.0,28,4.4585196301016135,300,1.733987953222993e-12
