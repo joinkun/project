@@ -1,0 +1,1 @@
+{"cls": "c1", "cfg": "full", "cost": "R1ip", "ot": "prop", "gamma": 0.1, "tau": 0.00021311892922489323, "iters": 400, "residual": 6.283919565253093e-12, "nz_mean": 8.583333333333334, "nz_med": 9.0, "nz_max": 16, "ess_med": 4.923855080871314, "max_load": 46.02633451652291, "unique_targets": 968, "seconds": 34.2}

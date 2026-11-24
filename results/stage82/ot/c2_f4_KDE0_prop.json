@@ -1,0 +1,1 @@
+{"cls": "c2", "cfg": "f4", "cost": "KDE0", "ot": "prop", "gamma": 0.1, "tau": 4.569706851641411e-05, "iters": 300, "residual": 2.5680568782604496e-12, "nz_mean": 9.036363636363637, "nz_med": 8.0, "nz_max": 27, "ess_med": 4.770812857987058, "max_load": 133.6200806574445, "unique_targets": 430, "seconds": 18.7}

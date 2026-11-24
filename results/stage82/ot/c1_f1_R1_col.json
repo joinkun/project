@@ -1,0 +1,1 @@
+{"cls": "c1", "cfg": "f1", "cost": "R1", "ot": "col", "gamma": 1e-06, "tau": 0.00021311892922489323, "iters": 1550, "residual": 9.082234964097324e-12, "nz_mean": 5.204545454545454, "nz_med": 4.5, "nz_max": 15, "ess_med": 2.9473660416125838, "max_load": 57.09090909090909, "unique_targets": 656, "seconds": 75.6}

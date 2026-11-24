@@ -1,0 +1,18 @@
+{
+ "capped": {
+  "R1": 9,
+  "KDE0": 9,
+  "IPW": 0,
+  "scale": 8,
+  "A1": 10
+ },
+ "kde0_fallback": {
+  "f0": 3,
+  "f1": 2,
+  "f2": 1,
+  "f3": 2,
+  "f4": 2,
+  "full": 2
+ },
+ "n_directions": 62
+}

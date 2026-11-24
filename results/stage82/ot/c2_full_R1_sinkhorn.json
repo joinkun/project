@@ -1,0 +1,1 @@
+{"cls": "c2", "cfg": "full", "cost": "R1", "ot": "sinkhorn", "nz_mean": 6.672727272727273, "nz_med": 10.0, "nz_max": 10, "ess_med": 4.725385157596702, "max_load": 167.84496001912828, "unique_targets": 353, "seconds": 80.4}

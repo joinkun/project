@@ -49,6 +49,8 @@ class Setting:
     pkey: str  # 計画のキー
     plan_dir: Path | None = None  # 計画の場所(None なら data)
     argmax: bool = False  # 候補の 1 位だけ(AUC は目標、ESS は 1)
+    # ステージ82: 計画のファイルが plan_{cls}_{cfg}_{plan_suffix}.npz(キー idx・pt)のとき
+    plan_suffix: str | None = None
 
 
 SETTINGS: dict[str, Setting] = {
@@ -80,8 +82,12 @@ def main() -> None:
 
 
 def run(settings: dict[str, Setting], out_dir: Path, title: str, rules: str,  # noqa: PLR0915
-        diag: tuple[str, ...] = ()) -> None:
-    """D1 の比較を計算し、``out_dir`` に ``comparison_report.md``・``summary.json`` を書く。"""
+        diag: tuple[str, ...] = (), base_key: str = BASE_KEY) -> None:
+    """D1 の比較を計算し、``out_dir`` に ``comparison_report.md``・``summary.json`` を書く。
+
+    ``base_key`` は、表の「R1・F1 との差」と条件 5・6 で比べる基準の設定の名前。
+    """
+    BASE_KEY = base_key  # noqa: N806
     spec = load_canonical_spec(Path("conf/accounts/core.yaml"))
     names = state_vector_names(spec, include_subtotals=False)
     members = subtotal_members(spec, names)
@@ -145,9 +151,14 @@ def run(settings: dict[str, Setting], out_dir: Path, title: str, rules: str,  # 
                 m = metrics(src, cls, names, members)
                 m["rho"] = float(corr(ctx(src, cls, names).wide[src.setting], refs[cls]))
                 y = endpoints(src, cls, names)
-                z = np.load((sp.plan_dir or sp.data) / f"plan_{cls}_{cfg}.npz",
-                            allow_pickle=True)
-                idx, pt = np.asarray(z[f"{sp.pkey}__idx"]), np.asarray(z[f"{sp.pkey}__pt"])
+                if sp.plan_suffix is None:
+                    z = np.load((sp.plan_dir or sp.data) / f"plan_{cls}_{cfg}.npz",
+                                allow_pickle=True)
+                    idx, pt = np.asarray(z[f"{sp.pkey}__idx"]), np.asarray(z[f"{sp.pkey}__pt"])
+                else:
+                    z = np.load((sp.plan_dir or sp.data) / f"plan_{cls}_{cfg}_{sp.plan_suffix}.npz",
+                                allow_pickle=True)
+                    idx, pt = np.asarray(z["idx"]), np.asarray(z["pt"])
                 if sp.argmax:
                     pt = np.zeros_like(pt, dtype=float)
                     pt[:, 0] = 1.0
@@ -215,7 +226,7 @@ def run(settings: dict[str, Setting], out_dir: Path, title: str, rules: str,  # 
         lines += [f"### {cls}", "",
                   "| 設定 | λ̃*_f | 違反 | \\|S(i)\\| 中央値 / 最大 | ESS | 純資産の改善 "
                   "| ステージ69 との差 | 解消率 | 順位相関 | ステージ69 との差 | 記号(対 69) "
-                  "| R1・F1 との差: 純資産 / 順位相関 | 記号(対 R1・F1) | 払込資本↓ / ↑ "
+                  f"| {BASE_KEY} との差: 純資産 / 順位相関 | 記号(対 {BASE_KEY}) | 払込資本↓ / ↑ "
                   "| 変更科目数 | 膨張 | AUC | 終点のゼロ |",
                   "|---|---|---:|---|---:|---:|---|---:|---:|---|---|---|---|---|---:|---:|---:"
                   "|---:|",
@@ -243,7 +254,8 @@ def run(settings: dict[str, Setting], out_dir: Path, title: str, rules: str,  # 
               "1〜4 = ステージ75 の条件"
               "(4 は F1・SP-F1 が ESS ≥ 3・候補の AUC ≤ 0.762 / 0.736・終点のゼロ ≥ 6.70、"
               "argmax は目標の AUC だけ)、"
-              "5 = R1・F1 より両 class で劣る指標がない、6 = R1・F1 よりどこかで優れる。", "",
+              f"5 = {BASE_KEY} より両 class で劣る指標がない、6 = {BASE_KEY} よりどこかで優れる。",
+              "",
               "| 設定 | 1 | 2 | 3 | 4 | 5 | 6 | L_f の fold 平均 | 候補 |",
               "|---|---|---|---|---|---|---|---:|---|"]
     cand: list[tuple[float, str]] = []

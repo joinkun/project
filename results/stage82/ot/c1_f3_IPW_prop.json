@@ -1,0 +1,1 @@
+{"cls": "c1", "cfg": "f3", "cost": "IPW", "ot": "prop", "gamma": 0.1, "tau": 0.00021311892922489323, "iters": 400, "residual": 2.2047919046030984e-12, "nz_mean": 7.5606060606060606, "nz_med": 7.0, "nz_max": 16, "ess_med": 4.496386806146903, "max_load": 57.09090909090909, "unique_targets": 886, "seconds": 48.6}

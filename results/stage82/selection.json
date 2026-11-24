@@ -1,0 +1,58 @@
+{
+ "best": "R1(False・stage1_penalty)",
+ "best_setting": {
+  "cost": "R1p",
+  "ot": "prop",
+  "qp": "base"
+ },
+ "lambda_tilde": 0.1,
+ "conditions": {
+  "R1(False・base)": {
+   "c1": true,
+   "c2": true,
+   "c4": true
+  },
+  "R1(True・base)": {
+   "c1": true,
+   "c2": true,
+   "c4": true
+  },
+  "R1(False・stage1_penalty)": {
+   "c1": true,
+   "c2": true,
+   "c4": true
+  },
+  "R1(True・stage1_penalty)": {
+   "c1": true,
+   "c2": true,
+   "c4": true
+  },
+  "R1(False・unified_extended)": {
+   "c1": true,
+   "c2": true,
+   "c4": true
+  },
+  "R1(True・unified_extended)": {
+   "c1": true,
+   "c2": true,
+   "c4": true
+  }
+ },
+ "emerge_mat_mean": {
+  "R1(False・base)": 0.310882049163396,
+  "R1(True・base)": 0.10552365213798802,
+  "R1(False・stage1_penalty)": 0.0024044618880396614,
+  "R1(True・stage1_penalty)": 0.0076760999793431105,
+  "R1(False・unified_extended)": 0.0,
+  "R1(True・unified_extended)": 0.0
+ },
+ "candidates": [
+  "R1(False・base)",
+  "R1(True・base)",
+  "R1(False・stage1_penalty)",
+  "R1(True・stage1_penalty)",
+  "R1(False・unified_extended)",
+  "R1(True・unified_extended)"
+ ],
+ "kde0_over_r1": true
+}
