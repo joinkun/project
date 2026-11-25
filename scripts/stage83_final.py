@@ -21,22 +21,16 @@ import evaluate_stage51 as e51
 import matplotlib as mpl
 
 mpl.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from stage76_feasibility_map import (  # noqa: E402
-    N_FOLD,
-    N_LAND,
-    SEED_CLF,
-    make_clf,
-    mds_embed,
-    mds_fit,
     moves,
     panel_years,
 )
 from stage82_common import COSTS, Setting  # noqa: E402
 from stage82_final import f3, pct, ratios, sym  # noqa: E402
 from stage83_common import DATA, FOLDS, NAMES, OUT  # noqa: E402
+from stage83_figures import draw_figures  # noqa: E402
 from tables_stage69 import INTERIM, Src, metrics, setup_excl  # noqa: E402
 from tilde_stage51 import load_tilde  # noqa: E402
 
@@ -48,7 +42,6 @@ from fsgen.accounting.plausibility import (  # noqa: E402
     evaluate_extra_checks,
     subtotal_members,
 )
-from fsgen.evaluation.classifiers import strict_sklearn_convergence  # noqa: E402
 from fsgen.models.unit_costs import (  # noqa: E402
     emergence_rate,
     inactive_mask,
@@ -62,7 +55,6 @@ REP_DOC = "S100UUP0"
 OT_ORDER = (("proposed_quad_unbalanced", "prop"), ("pure_lp", "pure_lp"), ("topk_hard_5", "top5"),
             ("topk_hard_8", "top8"), ("sinkhorn", "sinkhorn"), ("quad_row_only", "row"),
             ("quad_col_only", "col"))
-K_SMOOTH = 30
 
 
 def d1_table(key: str, order: list[str]) -> tuple[list[str], pd.DataFrame]:
@@ -378,161 +370,15 @@ def main() -> None:  # noqa: PLR0915
         rep.append(f"| {r['cls']} | {r['ratio']} | {f3(r['x0_med'])} | {f3(r['x1_med'])} "
                    f"| {f3(r['y_med'])} | {f3(r['corr_change'])} | {f3(r['mae'])} |")
     rep += ["", "事例は `backtest_cases.md`。", ""]
-    # 図(パートD)
-    clf_axis = make_clf("logreg")
-    with strict_sklearn_convergence():
-        clf_axis.fit(x, (lab >= 1).astype(int))
-    agg_codes = np.array([code_of.get(d, d) for d in docs])
-    uc = np.random.default_rng(SEED_CLF).permutation(np.unique(agg_codes))
-    fold_of = {c: i for i, part in enumerate(np.array_split(uc, N_FOLD)) for c in part}
-    fold = np.array([fold_of[c] for c in agg_codes])
-    score = np.empty(len(lab))
-    for f in range(N_FOLD):
-        m_ = make_clf("lightgbm")
-        m_.fit(x[fold != f], (lab[fold != f] >= 1).astype(int))
-        score[fold == f] = m_.predict_proba(x[fold == f])[:, 1]
-    th0 = th.copy()
-    th0[:, idx[_RE]] = 0.0
-    wsym = 0.5 * (th0[0] + th0[1])
-    healthy = lab == 0
-    land = xh[np.random.default_rng(0).choice(len(xh), size=N_LAND, replace=False)]
-    proj, mean_d2, share = mds_fit(land, wsym)
-    e_all = mds_embed(x, land, wsym, proj, mean_d2)
-    la_all = clf_axis.decision_function(x)
-    beta = np.polyfit(la_all, e_all[:, 0], 1)
-    p_all = np.column_stack([la_all, e_all[:, 0] - np.polyval(beta, la_all)])
-
-    def plane(pts: np.ndarray) -> np.ndarray:
-        em = mds_embed(pts, land, wsym, proj, mean_d2)
-        lx = clf_axis.decision_function(pts)
-        return np.column_stack([lx, em[:, 0] - np.polyval(beta, lx)])
-
-    def background(ax: Any, ea: np.ndarray, pts: np.ndarray) -> Any:
-        lo_, hi_ = np.quantile(pts, 0.01, axis=0), np.quantile(pts, 0.99, axis=0)
-        pad = 0.08 * (hi_ - lo_)
-        lo_, hi_ = lo_ - pad, hi_ + pad
-        gx, gy = np.meshgrid(np.linspace(lo_[0], hi_[0], 120), np.linspace(lo_[1], hi_[1], 120))
-        grid = np.column_stack([gx.ravel(), gy.ravel()])
-        sc = hi_ - lo_
-        zz, dmin = np.empty(len(grid)), np.empty(len(grid))
-        for s in range(0, len(grid), 600):
-            dd_ = np.linalg.norm((grid[s:s + 600, None, :] - ea[None, :, :]) / sc, axis=2)
-            kk = np.argpartition(dd_, K_SMOOTH, axis=1)[:, :K_SMOOTH]
-            zz[s:s + 600] = score[kk].mean(axis=1)
-            dmin[s:s + 600] = dd_.min(axis=1)
-        zz[dmin > np.quantile(dmin, 0.85)] = np.nan
-        cf = ax.contourf(gx, gy, zz.reshape(gx.shape), levels=np.linspace(0, 1, 11),
-                         cmap="RdYlGn_r", alpha=0.35)
-        ax.scatter(*ea[healthy].T, s=3, c="#4a6b8a", alpha=0.25, linewidths=0,
-                   label="Healthy firms (class 0)")
-        ax.set_xlim(lo_[0], hi_[0])
-        ax.set_ylim(lo_[1], hi_[1])
-        ax.grid(True, color="#dddddd", linewidth=0.5)
-        return cf
-    # 図 1
-    fig, axes = plt.subplots(2, 2, figsize=(15, 13.5))
-    cf = None
-    for ci_, cls in enumerate(("c2", "c1")):
-        x0, ya, _d = arrays(src("KDE0p", "t123"), cls)
-        rc_ = [c for c in pairs[pairs["group"] == ("class 2 → 回復" if cls == "c2"
-                                                   else "class 1 → class 0")]["edinetCode"]
-               if c in comp[2022].index and c in comp[2024].index]
-        xa, xb = comp[2022].loc[rc_].to_numpy(), comp[2024].loc[rc_].to_numpy()
-        md = np.array(mids.get(cls, []))
-        for ri in (0, 1):
-            ax = axes[ri, ci_]
-            if ri == 0:
-                emb = [mds_embed(v, land, wsym, proj, mean_d2) for v in (x0, ya, xa, xb)]
-                ea = e_all
-                mid_e = mds_embed(md, land, wsym, proj, mean_d2) if len(md) else None
-            else:
-                emb = [plane(v) for v in (x0, ya, xa, xb)]
-                ea = p_all
-                mid_e = plane(md) if len(md) else None
-            s0, s1, qa, qb = emb
-            cf = background(ax, ea, np.vstack([s0, s1, qa, qb, ea[healthy]]))
-            ax.quiver(*qa.T, *(qb - qa).T, angles="xy", scale_units="xy", scale=1.0,
-                      color="#1b7837", width=0.0035, alpha=0.9, zorder=2)
-            ax.quiver(*s0.T, *(s1 - s0).T, angles="xy", scale_units="xy", scale=1.0,
-                      color="#762a83", width=0.0022, alpha=0.6, zorder=2)
-            ax.scatter(*s0.T, s=14, c="#d6604d", edgecolors="white", linewidths=0.4, zorder=3,
-                       label=f"Distressed start x_i (class {cls[1]}, n={len(x0)})")
-            ax.scatter(*s1.T, s=14, c="#762a83", edgecolors="white", linewidths=0.4, zorder=3,
-                       label=f"KDE0 + stage-1 penalty endpoint y_i* (λ̃ = {lam:g})")
-            if mid_e is not None:
-                ax.scatter(*mid_e.T, s=110, marker="*", c="#f1a340", edgecolors="black",
-                           linewidths=0.6, zorder=4,
-                           label=f"Tier C midpoint y_i^(0.5) (n={len(md)})")
-                # Tier C の始点は極端なので、中間点が必ず見えるよう表示の範囲を広げる
-                (x_lo, x_hi), (y_lo, y_hi) = ax.get_xlim(), ax.get_ylim()
-                pad_x, pad_y = 0.05 * (x_hi - x_lo), 0.05 * (y_hi - y_lo)
-                ax.set_xlim(min(x_lo, float(mid_e[:, 0].min()) - pad_x),
-                            max(x_hi, float(mid_e[:, 0].max()) + pad_x))
-                ax.set_ylim(min(y_lo, float(mid_e[:, 1].min()) - pad_y),
-                            max(y_hi, float(mid_e[:, 1].max()) + pad_y))
-            ax.plot([], [], color="#1b7837", lw=1.3,
-                    label=f"Real recovery 2022→2024 (n={len(rc_)})")
-            if ri == 1:
-                ax.axvline(float(np.median(la_all[healthy])), color="#1b7837", lw=0.9, ls=":",
-                           label="Median logit of healthy firms")
-                ax.set_xlabel("LogReg distress logit (higher = riskier)")
-                ax.set_ylabel("MDS 1 residual (orthogonal to the logit)")
-                title = "Distress logit (LogReg) × MDS 1 residual (Ψ_KDE0)"
-            else:
-                ax.set_xlabel("MDS 1")
-                ax.set_ylabel("MDS 2")
-                title = f"Classical MDS of Ψ_KDE0 (2-D share {share:.0%})"
-            ax.set_title(f"({'abcd'[2 * ri + ci_]}) Class {cls[1]}: {title}", fontsize=10,
-                         loc="left")
-            ax.legend(loc="lower left", fontsize=7.5, framealpha=0.85)
-    fig.suptitle("KDE0 + stage-1 penalty (main model); contours = distress score "
-                 "(LightGBM, out-of-fold, 30-NN mean in 2-D)", fontsize=11)
-    if cf is not None:
-        fig.colorbar(cf, ax=axes, shrink=0.6, pad=0.01).set_label("Distress score")
-    f1 = OUT / "figures" / "bs_manifold_mapping_kde0_stage1"
-    fig.savefig(f"{f1}.png", dpi=300, bbox_inches="tight")
-    fig.savefig(f"{f1}.pdf", bbox_inches="tight")
-    plt.close(fig)
-    # 図 2
-    bt = np.load(DATA / "backtest_arrays.npz", allow_pickle=True)
-    fig, axes2 = plt.subplots(1, 2, figsize=(15, 7.2))
-    cf = None
-    for ci_, cls in enumerate(("c2", "c1")):
-        sel = bt["cls"] == cls
-        x0b, x1b, yb = bt["x0"][sel], bt["x1"][sel], bt["y"][sel]
-        a0, a1, ay = plane(x0b), plane(x1b), plane(yb)
-        ax = axes2[ci_]
-        cf = background(ax, p_all, np.vstack([a0, a1, ay, p_all[healthy]]))
-        ax.quiver(*a0.T, *(a1 - a0).T, angles="xy", scale_units="xy", scale=1.0, color="#1b7837",
-                  width=0.0035, alpha=0.9, zorder=2)
-        ax.quiver(*a0.T, *(ay - a0).T, angles="xy", scale_units="xy", scale=1.0, color="#762a83",
-                  width=0.0030, alpha=0.75, zorder=2)
-        ax.scatter(*a0.T, s=16, c="#d6604d", edgecolors="white", linewidths=0.4, zorder=3,
-                   label=f"Pre-recovery x_k,0 (n={int(sel.sum())})")
-        ax.plot([], [], color="#1b7837", lw=1.3, label="Real recovery x_k,0 → x_k,1")
-        ax.plot([], [], color="#762a83", lw=1.3, label="Out-of-fold generation x_k,0 → ŷ_k")
-        ax.axvline(float(np.median(la_all[healthy])), color="#1b7837", lw=0.9, ls=":",
-                   label="Median logit of healthy firms")
-        r = bs[(bs["cls"] == cls) & (bs["model"] == "KDE0p|main")].iloc[0]
-        ax.set_title(f"({'ab'[ci_]}) Class {cls[1]} recovered firms: "
-                     f"median DSA {r['dsa_0.01_med']:.3f}, Cos {r['cos_med']:.3f}, "
-                     f"ERR_L1 {r['err_l1_med']:.3f}", fontsize=10, loc="left")
-        ax.set_xlabel("LogReg distress logit (higher = riskier)")
-        ax.set_ylabel("MDS 1 residual (orthogonal to the logit)")
-        ax.legend(loc="lower left", fontsize=7.5, framealpha=0.85)
-    fig.suptitle("Backtest on real recovered firms: real vs out-of-fold generated moves "
-                 "(KDE0 + stage-1 penalty)", fontsize=11)
-    if cf is not None:
-        fig.colorbar(cf, ax=axes2, shrink=0.8, pad=0.01).set_label("Distress score")
-    f2 = OUT / "figures" / "bs_backtest_overlay_kde0"
-    fig.savefig(f"{f2}.png", dpi=300, bbox_inches="tight")
-    fig.savefig(f"{f2}.pdf", bbox_inches="tight")
-    plt.close(fig)
+    # 図(パートD、描画は stage83_figures.draw_figures)
+    f1, f2, share = draw_figures(lam, bs)
     rep += ["## パートD: 図", "",
             f"- 図 1: `{f1}.png`・`.pdf`(Ψ_KDE0 の古典的 MDS の上位 2 成分の寄与 {share:.0%}。"
             "距離は罰則なしの KDE0 の θ を対称化したもの。"
             "下段の横軸は分類器のロジットなので、左右の勾配は"
             "作り方から生じる)。★ = class 2 の Tier C の中間点。",
+            "左列 (a)(c) は主な点が読める標準の範囲に固定し、Tier C の全体は別図 "
+            "`results/stage83/figures/bs_tier_c_overview_kde0.png`・`.pdf` に示す。",
             f"- 図 2: `{f2}.png`・`.pdf`(緑 = 実績、紫 = out-of-fold の生成。同じ始点から)。", ""]
     (OUT / "report.md").write_text("\n".join(rep) + "\n", encoding="utf-8")
     print("\n".join(rep))

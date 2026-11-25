@@ -178,6 +178,6 @@ Tier C の企業と中間点 y⁽⁰·⁵⁾ = 0.5 x + 0.5 ŷ(自己資本比率
 
 ## 図
 
-- 図 1: `results/stage83/figures/bs_manifold_mapping_kde0_stage1.png`・`.pdf`(Ψ_KDE0 の古典的 MDS の上位 2 成分の寄与 55%。距離は罰則なしの KDE0 の θ を対称化したもの。下段の横軸は分類器のロジットなので、左右の勾配は作り方から生じる)。★ = class 2 の Tier C の中間点。
+- 図 1: `results/stage83/figures/bs_manifold_mapping_kde0_stage1.png`・`.pdf`(Ψ_KDE0 の古典的 MDS の上位 2 成分の寄与 55%。距離は罰則なしの KDE0 の θ を対称化したもの。下段の横軸は分類器のロジットなので、左右の勾配は作り方から生じる)。★ = class 2 の Tier C の中間点。左列 (a)(c) は主な点が読める標準の範囲に固定し(枠外の点の数を注記)、Tier C の全体は別図 `results/stage83/figures/bs_tier_c_overview_kde0.png`・`.pdf` に示す。
 - 図 2: `results/stage83/figures/bs_backtest_overlay_kde0.png`・`.pdf`(緑 = 実績、紫 = out-of-fold の生成。同じ始点から)。
 
