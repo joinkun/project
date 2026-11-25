@@ -80,6 +80,9 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--qp", choices=("base", "unified"), default="base")
     ap.add_argument("--tier", choices=("t1", "t12", "t123"), default="t123")
     ap.add_argument("--shard", default="0/1")
+    ap.add_argument("--data", type=Path, default=DATA,
+                    help="theta.json・計画・生成の場所(ステージ83 は data/interim/stage83)")
+    ap.add_argument("--out", type=Path, default=OUT, help="記録の出力先")
     args = ap.parse_args()
     st = Setting(args.group, args.cost, args.ot, args.qp, args.tier)
     sp = COSTS[args.cost]
@@ -89,7 +92,7 @@ def main() -> None:  # noqa: PLR0915
     cfg = tier_config(args.tier)
     dcs = load_direction_constraints(_CANONICAL) if args.tier == "t123" else ()
     na_coef = members["jppfs_cor_NetAssets"]
-    tj = json.loads((DATA / "theta.json").read_text(encoding="utf-8"))
+    tj = json.loads((args.data / "theta.json").read_text(encoding="utf-8"))
     sigma = np.maximum(np.array(tj["sigma"], dtype=float), SIGMA_FLOOR)
     w = 1.0 / sigma ** 2 / np.array([10.0 if n in _PAID else 1.0 for n in names]) ** 2
     th = np.array(tj["survival"]["alldist"]["theta"] if sp.pool == "alldist"
@@ -111,7 +114,8 @@ def main() -> None:  # noqa: PLR0915
         "docID").set_index("docID")["filerName"]
 
     def plan(cls: str, src: list[str]) -> tuple[np.ndarray, np.ndarray]:
-        z = np.load(DATA / f"plan_{cls}_{args.cfg}_{args.cost}_{args.ot}.npz", allow_pickle=True)
+        z = np.load(args.data / f"plan_{cls}_{args.cfg}_{args.cost}_{args.ot}.npz",
+                    allow_pickle=True)
         if [str(v) for v in z["source_docs"]] != src:
             raise ValueError("始点の並びが一致しない")
         return np.asarray(z["idx"]), np.asarray(z["pt"])
@@ -180,7 +184,7 @@ def main() -> None:  # noqa: PLR0915
                 row[f"x0_{n}"] = float(x0[j_])
                 row[f"x1_{n}"] = float(y[j_])
             rows.append(row)
-        out_dir = DATA / args.group / f"gen_{args.cfg}" / args.cls / f"{st.tag}__l{lt:g}"
+        out_dir = args.data / args.group / f"gen_{args.cfg}" / args.cls / f"{st.tag}__l{lt:g}"
         out_dir.mkdir(parents=True, exist_ok=True)
         df = pd.DataFrame(rows)
         for seed in (0, 1, 2):
@@ -191,9 +195,9 @@ def main() -> None:  # noqa: PLR0915
                         "seconds": round(time.perf_counter() - t0, 1)})
         print(f"  λ̃ = {lt:g}: 不可能 {n_infeas}、代替ソルバ {n_fb}"
               f"({time.perf_counter() - t0:.0f}s)", flush=True)
-    (OUT / "qp").mkdir(parents=True, exist_ok=True)
+    (args.out / "qp").mkdir(parents=True, exist_ok=True)
     pd.DataFrame(summary).to_csv(
-        OUT / "qp" / f"{args.group}_{args.cls}_{args.cfg}_{st.tag}_{i_sh}of{n_sh}.csv",
+        args.out / "qp" / f"{args.group}_{args.cls}_{args.cfg}_{st.tag}_{i_sh}of{n_sh}.csv",
         index=False)
 
 

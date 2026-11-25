@@ -1,0 +1,56 @@
+{
+ "gate1_no_violation_no_infeasible": true,
+ "gate2_emergence_below_1pct": true,
+ "gate3_vs_stage69_conditions_1_4": true,
+ "gate3_not_worse_than_R1p": true,
+ "passed": true,
+ "lambda_tilde": 0.1,
+ "stars": {
+  "f0": 0.03,
+  "f1": 0.1,
+  "f2": 3.0,
+  "f3": 0.1,
+  "f4": 0.1
+ },
+ "n_infeasible_main": 0,
+ "emerge_mat": {
+  "c2": 0.0025531914893617,
+  "c1": 0.0011650485436893
+ },
+ "sign69": {
+  "c2": [
+   1,
+   0,
+   0
+  ],
+  "c1": [
+   1,
+   0,
+   0
+  ]
+ },
+ "sign_R1p_minus_main": {
+  "c2": [
+   -1,
+   0,
+   0
+  ],
+  "c1": [
+   -1,
+   0,
+   0
+  ]
+ },
+ "ess": [
+  5.937617637408278,
+  5.706009465830771
+ ],
+ "auc": [
+  0.730359393487447,
+  0.6446423196787148
+ ],
+ "e_zero": [
+  9.072727272727272,
+  9.15625
+ ]
+}

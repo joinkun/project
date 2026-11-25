@@ -38,6 +38,10 @@ COSTS: dict[str, CostSpec] = {
     "R1i_all": CostSpec("R1", True, False, "alldist"),
     "R1p_all": CostSpec("R1", False, True, "alldist"),
     "R1ip_all": CostSpec("R1", True, True, "alldist"),
+    # ステージ83: 主モデル KDE0 + stage1_penalty。苦境全体のプールは、theta.json の survival が
+    # KDE0 で推定されたもの(data/interim/stage83/theta.json)を使う
+    "KDE0p": CostSpec("KDE0", False, True),
+    "KDE0p_all": CostSpec("KDE0", False, True, "alldist"),
 }
 OT_MODES = ("prop", "pure_lp", "top5", "top8", "sinkhorn", "row", "col")
 

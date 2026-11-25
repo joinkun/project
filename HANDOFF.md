@@ -1,4 +1,4 @@
-# 引き継ぎ文書(ステージ1〜82。主提案は A1・SP-F1(ユーザーの決定、ステージ79 の結果を見たあと)。事前の規則を満たしたのは R1・F1 と A1・F1)
+# 引き継ぎ文書(ステージ1〜83。主提案は KDE0 + indiv_scale = False + stage1_penalty + 提案の輸送(γ' = 0.1)+ F1、λ̃ = 0.1。ステージ83 で確定)
 
 2026-10-17 時点の状態。**ステージ68 で実験を終了(モデルの改良・追加実験は凍結)し、ステージ69 で論文・発表用のマスター表 `results/stage69/paper_tables.md` と定式化 `results/stage69/formulation_final.md` を確定した。** 以降は論文執筆のみ。発表の数値は `results/stage65/slides_numbers.md`(論文の表と 31 項目を照合済み、`results/stage69/consistency.md`)。
 (経緯: ステージ31 で旧最終設定、47 で制約を確定。59〜65 で輸送計画 + 凸 QP に置き換え、66〜68 で改訂を試みたが不採用。)
@@ -57,7 +57,29 @@ EDINET の有価証券報告書(XBRL)から貸借対照表を集計し、継続�
 - 報告は日本語。**結論が変わることを恐れず、数字を有利に見せない。**「指標が良いこと」と「出力が妥当であること」は別で、BS 表を必ず目で読む。
 - 結果ファイルは `results/stageNN/` に置く。
 
-## 4. 主提案(ステージ80、2026-11-09 のユーザーの決定): A1・SP-F1
+## 4. 主提案(ステージ83 で確定、2026-11-25 のユーザーの決定): KDE0 + stage1_penalty
+
+**主提案は KDE0 + indiv_scale = False + stage1_penalty + 提案の輸送(γ' = 0.1)+ F1、λ̃ = 0.1**。
+
+- **基準単価**: θ_a^± = min(f̂_a^±(0) / π_a^±, 10³)。
+  - f̂(0) は、鏡像法の KDE(Silverman の頑健な帯域)による、規格化した幅 z = |Δ| / (|x₀| + σ) の始点の密度。π は動いた割合。
+  - 57 社(class 1 → class 0)から推定し、n < 5 の向きは R1 = (ln 2 / m)/π に戻す。
+  - 実装は `src/fsgen/models/unit_costs.py`。
+- **stage1_penalty**: 始点ゼロの非負の資産・負債と非支配株主持分(A_inact(i))の増加の単価を、輸送と QP の両方で θ_max にする。
+- **輸送・生成**:
+  - 輸送: 2 次正則化の片側不均衡 OT(`src/fsgen/models/sparse_transport.py`、γ' = 0.1、τ' = τ1 log κ / (κ(κ − 1)))。
+  - 生成: 非ゼロの候補すべてで F1。制約は 𝓕⁺(tier1 + 2 + 3)。
+- **確定数値**(`results/stage83/report.md`・`paper_tables.md`):
+  - D1: 違反 0 / 0、純資産の改善 0.403 / 0.221。ステージ69 との差は +0.115 / +0.028 で、両 class で条件 1〜4 を満たす。
+  - 始点ゼロ科目の発生率 0.3% / 0.1%、ESS 5.94 / 5.71。
+  - R1 + stage1_penalty より +0.004 / +0.003(差はごく小さい)。
+- **バックテスト**: 方向は合う(DSA 0.647 / 0.667、Cos 0.533 / 0.466)。ただし動きすぎで、ERR^{L1} は −0.450 / −0.334。
+  - 生成は 5 年後、実績は 2 年。事後に変化を 2/5 に縮めると、ERR^{L1} は +0.095 / +0.017。
+- **経緯(論文に書く)**: R1 + stage1_penalty はステージ82 の事前の規則で選ばれた。KDE0 にしたのはユーザーの決定で、KDE0 と R1 の θ の順位相関は 0.996 で実質的に同等である。
+- 実行: `results/stage83/run_d1.sh` → `run_post.sh`(ステージ82 のスクリプトに `--data data/interim/stage83`)。
+- 以下の旧主提案の節は、比較と記録のために残す。
+
+### 旧主提案(ステージ80〜82、2026-11-09 のユーザーの決定): A1・SP-F1
 
 **主提案は A1・SP-F1**(区間面積のコスト A1 + 2 次正則化のスパース OT、カットオフなし、γ' = 0.1)。
 
@@ -277,6 +299,7 @@ min(−1e-3 × 総資産(始点), 始点の値) を下回れば違反。10 は�
 | 79 | 「移動量 ÷ 区間面積」のコスト A1・A2 とスパース OT(`results/stage79/report.md`、決定は計算の前に `criteria.md`、§7 の追記 = スパース OT の列の罰則の変更)。D1 で、規則上は **A1・F1 が置き換えの候補**だが、R1・F1 との差は純資産の改善で +0.001〜+0.006 と実質的にない(A1 は R1 のほぼ定数倍、log の相関 0.997)。R1・F1 のままを推奨し、決定はユーザー。A2(2 区間)は凹が 37 / 52 方向で、R1・F1 より劣る(class 2 −0.040)。スパース OT(`src/fsgen/models/sparse_transport.py`)はカットオフなしで候補 5 社(中央値)、主指標は変わらず、ESS が class 1 で 3 未満。Sinkhorn は 25〜27% の p が厳密に 0 だが、累積 90% には 10〜11 社(最大 187)が必要で、現行のカットオフは上限 10 社に当たっている |
 | 80 | A1・SP-F1 を主提案に(ユーザーの決定、事後。`results/stage80/report.md`、規則は `criteria.md`)。γ' = 0.1 に固定(計画の性質だけで選択)し、9 設定(abs・R1・A1 × argmax・F1・SP-F1)の D1: A1・SP-F1 は違反 0 / 0、ESS 4.65 / 4.27 で条件 4 を満たすが、**条件 3(class 1 でステージ69 より優れる)を満たさない**。全条件を満たすのは A1・F1 だけ。単一の生成(λ̃ = 0.1): 純資産の改善 0.401 / 0.211、class 2 の苦境の確率(LightGBM)37.6% → 0.59%、空白地帯率 Ψ_A1 で 78% → 53%、終点の識別 AUC 0.95(丸め)。Ψ_A1 の回復率の四分位は合算の 1 年で 36% → 7% の単調減少(2 年・class 2 では単調でない)。命題 1 は A1 でも成立 |
 | 82 | 数理モデルの改訂と指導教員の指摘の検証(`results/stage82/report.md`、規則は `criteria.md`、§8 の追記 = unified_extended の固定の値)。統合実行 `scripts/stage82_unified_revision.py`(段階ごとに別のプロセス)、コアは `src/fsgen/models/unit_costs.py`(θ の 5 方式・個体別の単価・ψ_i・始点ゼロ科目の発生率)。**規則で選んだ主モデル: R1 + indiv = False + stage1_penalty(輸送と QP で始点ゼロ科目の増加の単価を上限に)、λ̃ = 0.1**。始点ゼロ科目の発生率は 31% → 0.2%、純資産の改善は base より +0.016 / +0.008、class 1 でステージ69 より有意に優れる(+0.024、条件 3 を初めて満たす)。R1・KDE0・A1 は θ の相関 0.996〜0.998 でほぼ同じ(KDE0 は規則上 R1 より優れるが差は +0.006 / +0.003)。輸送の方式のアブレーションは主指標にほぼ差なし(pure_lp・col_only は違反 1)。制約は tier3 まで要る(tier1 だけで違反 24 / 50 社)。Tier C(4 社)の中間点の違反 0。主モデルの採否はユーザーの判断待ち |
+| 83 | 主提案を KDE0 + stage1_penalty に確定(`results/stage83/report.md`・`paper_tables.md`、規則は `criteria_stage83.md`)。D1: 違反 0、発生率 0.3% / 0.1%、ステージ69 に対して両 class で条件 1〜4、R1 + stage1_penalty より +0.004 / +0.003 → ゲート通過、λ̃ = 0.1。out-of-fold のバックテスト(57 + 15 社、自 fold の λ̃ はリークのため主にしない): 方向は合う(DSA 約 0.65、Cos 約 0.5)が動きすぎ(ERR^{L1} −0.450 / −0.334、事後に 2/5 に縮めると正)。Tier C 5 社の中間点の違反 0。図は `results/stage83/figures/` |
 
 ## 7. 却下した設計と理由
 
@@ -462,6 +485,7 @@ min(−1e-3 × 総資産(始点), 始点の値) を下回れば違反。10 は�
 | (make なし) | ステージ79 区間面積のコスト・スパース OT | `results/stage79/run.sh`(`stage79_weights.py` → `stage79_ot.py`(POT・numpy)→ `stage79_qp.py`(cvxpy)→ `metrics_stage39.py` → `stage79_evaluate.py`) |
 | (make なし) | ステージ80 A1・SP-F1 の主提案化 | `results/stage80/run_ot.sh`(`stage80_ot.py`、POT・numpy)→ `results/stage80/run.sh`(`stage80_qp.py` → `metrics_stage39.py` → `stage80_evaluate.py`)→ `stage80_final.py` |
 | (make なし) | ステージ82 数理モデルの改訂 | `stage82_unified_revision.py --steps costs,ot,qp,metrics,evaluate` → `--steps full,final`(§8 のやり直しは `results/stage82/rerun_unified.sh`) |
+| (make なし) | ステージ83 主モデルの確定・バックテスト | `results/stage83/run_d1.sh` → `results/stage83/run_post.sh`(`stage83_costs.py` を先に実行) |
 
 中核のコード:
 - `src/fsgen/accounting/projection_qp.py`: 射影 QP(`extra_constraints`、strict な収束検査、OSQP→CLARABEL/ECOS へのフォールバック)

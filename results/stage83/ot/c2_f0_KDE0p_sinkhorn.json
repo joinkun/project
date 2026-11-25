@@ -1,0 +1,1 @@
+{"cls": "c2", "cfg": "f0", "cost": "KDE0p", "ot": "sinkhorn", "nz_mean": 7.0, "nz_med": 10.0, "nz_max": 10, "ess_med": 7.145529471761086, "max_load": 132.07462635422542, "unique_targets": 374, "seconds": 75.0}

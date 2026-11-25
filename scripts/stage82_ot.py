@@ -72,10 +72,13 @@ def main() -> None:  # noqa: PLR0915
     ap.add_argument("--cls", choices=("c2", "c1"), required=True)
     ap.add_argument("--cfg", choices=("f0", "f1", "f2", "f3", "f4", "full"), required=True)
     ap.add_argument("--pairs", required=True, help="コスト:方式 のカンマ区切り")
+    ap.add_argument("--data", type=Path, default=DATA,
+                    help="theta.json・計画・生成の場所(ステージ83 は data/interim/stage83)")
+    ap.add_argument("--out", type=Path, default=OUT, help="記録の出力先")
     args = ap.parse_args()
     names = state_vector_names(load_canonical_spec(Path("conf/accounts/core.yaml")),
                                include_subtotals=False)
-    tj = json.loads((DATA / "theta.json").read_text(encoding="utf-8"))
+    tj = json.loads((args.data / "theta.json").read_text(encoding="utf-8"))
     x, lab, docs, _ = load_tilde(names)
     docs_a = np.array(docs)
     agg = pd.read_csv("data/interim/values/aggregated_core.csv", dtype={"docID": str})
@@ -89,7 +92,7 @@ def main() -> None:  # noqa: PLR0915
     n0, n1 = len(xs), len(xt)
     kappa = n1 / n0
     tau_q = TAU1 * np.log(kappa) / (kappa * (kappa - 1.0))
-    (OUT / "ot").mkdir(parents=True, exist_ok=True)
+    (args.out / "ot").mkdir(parents=True, exist_ok=True)
     cache: dict[str, np.ndarray] = {}
     for pair in args.pairs.split(","):
         cost, ot_mode = pair.split(":")
@@ -146,9 +149,9 @@ def main() -> None:  # noqa: PLR0915
                  "nz_max": int(nz.max()), "ess_med": float(np.median(1.0 / (pt ** 2).sum(axis=1))),
                  "max_load": float(kappa * load.max()), "unique_targets": int((load > 0).sum()),
                  "seconds": round(time.perf_counter() - t0, 1)}
-        np.savez(DATA / f"plan_{args.cls}_{args.cfg}_{cost}_{ot_mode}.npz",
+        np.savez(args.data / f"plan_{args.cls}_{args.cfg}_{cost}_{ot_mode}.npz",
                  source_docs=np.array(src), idx=idx, pt=pt, top10_idx=top_idx, top10_p=top_p)
-        (OUT / "ot" / f"{args.cls}_{args.cfg}_{cost}_{ot_mode}.json").write_text(
+        (args.out / "ot" / f"{args.cls}_{args.cfg}_{cost}_{ot_mode}.json").write_text(
             json.dumps(info, ensure_ascii=False), encoding="utf-8")
         print(f"[{args.cls} {args.cfg} {cost} {ot_mode}] |S| 平均 {info['nz_mean']:.2f}、"
               f"ESS {info['ess_med']:.2f}、最大負荷 {info['max_load']:.1f}"
